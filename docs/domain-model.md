@@ -43,6 +43,7 @@ erDiagram
 | 批次身份 StockLot | 内部 id, product_id, 来源（收货行或期初导入行）, 外部批号(可空), expiry_date(可空), expiry_status | [事实] 相同效期不等于相同批次（D04）。[候选] 每条收货行、每条期初行各生成一个 StockLot；外部批号缺失时记为"未知"，不根据效期编造 |
 | 货位 Location | id, code, 类型(RECEIVING/STORAGE), 是否启用 | [事实] 未上架的合格货可以直接出货，所以 RECEIVING 也是能出货的货位。改名不能改动历史（D03），历史靠流水里的 code 快照 |
 | 状态 Condition | PENDING_INSPECTION / AVAILABLE / HOLD / DAMAGED | [候选] 只有 AVAILABLE 计入可用量。"待上架"是货位，不是状态（PROJECT.md：待上架≠未验收） |
+| 商品可用汇总 ProductAvailability | 键 = (owner, product)；sellable、reserved、row_version | [候选] 每个货主+商品一行，是**所有改变商品级可用量的命令共同的加锁点**；CHECK (reserved <= sellable)。它是流水和占用流水之和的投影，由对账检查核对。2026-09-28 按 Codex 审查 PR #1 补充：没有这一行时，未分配占用分散在各订单行上，两个并发接单锁不到同一行，会超卖 |
 | 库存余额 StockBalance | 键 = (owner, product, lot, location, condition)；on_hand、allocated、row_version | [候选] 由流水累计而来的投影，方便加锁和查询；可以随时由流水重建核对 |
 | 库存流水 StockMovement | id, operation_id, 类型, 余额键, 数量增减(带符号, 基本单位), location_code 快照, 来源单据及行, 操作人, UTC 时间, 香港业务日期, reverses_id | [候选] 过账后只追加不修改；类型为 OPENING / RECEIPT / MOVE_OUT / MOVE_IN / CONDITION_OUT / CONDITION_IN / SHIP / ADJUST / REVERSAL |
 | 订单 Order / 订单行 OrderLine | owner, 外部单号, 来源文件指纹与页/行；行上有 product, qty_ordered, 原始单位与数量, requested_expiry(可空) | [事实] 订单是 PDF，可能指定效期 |
@@ -121,6 +122,7 @@ qty_ordered = 已发出 + 已分配未发 + 未分配占用 + 已取消
 | I8 | 订单行指定了效期时，分配的批次效期必须一致，不能自动换成其他效期 | A03 |
 | I9 | 预告不产生流水；导入预览不产生流水 | A01 A08 |
 | I10 | 移动已被占用的库存时，把占用一起移到新货位，或者拒绝移动；不能留下指向空货位的占用 | A02 |
+| I11 | 每个 (货主, 商品) 的占用合计（已分配未发 + 未分配占用）≤ 可售实物合计；由 ProductAvailability 行在锁内检查，不能只靠单行 CHECK | A06 A10 |
 
 **[已验证]（反例）** 在 InvenTree 上实测时，I2 和 I4 都被违反了：直接调用分配接口时，待检（QUARANTINED）的库存可以被分配（网页表单默认会把它过滤掉，但服务端不拦）；同一个分配请求提交两次，一张 10 件的订单行被分配并发出了 20 件。这说明这两条必须由服务端强制执行，不能只靠界面提醒。见 T01 分支的 `docs/fit-gap.md`。
 
@@ -143,8 +145,8 @@ qty_ordered = 已发出 + 已分配未发 + 未分配占用 + 已取消
 **事务内的步骤（候选）：**
 
 1. 查 Operation 表：同一个 operation_id、同样的 payload 哈希已经存在，就**直接返回上次的结果**，什么都不写；同一个 id 但 payload 不同，就拒绝（A05）。
-2. 按固定顺序（余额键排序）锁住涉及的余额行，避免两个请求互相等待造成死锁。
-3. 在锁内重新读取数量，检查 I1–I10。前端检查过不算数（AGENTS.md）。
+2. 先对涉及的 ProductAvailability 行（按 owner、product 排序）执行 `SELECT … FOR UPDATE`，再按固定顺序（余额键排序）锁住涉及的余额行，避免两个请求互相等待造成死锁。接单、分配、发货、取消、验货改状态、移入或移出不可售状态的命令都必须先锁 ProductAvailability 行；接单时还没选货位，也会在这一行上排队，从而阻止并发超卖。
+3. 在锁内重新读取数量，检查 I1–I11。前端检查过不算数（AGENTS.md）。
 4. 写流水、占用流水和单据状态，更新余额投影，写入 Operation 结果。
 5. 提交。任何一步失败，整体回滚。
 
