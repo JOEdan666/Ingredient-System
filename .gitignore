@@ -1,0 +1,27 @@
+# Private business files must remain outside public version control.
+private-data/
+customer-data/
+backups/
+*.sqlite
+*.sqlite3
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+CLAUDE.local.md
+.claude/settings.local.json
+node_modules/
+dist/
+target/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Broad ignores are a convenience, not a privacy guarantee.
+# Only reviewed synthetic fixtures may be explicitly added if a file type is ignored.
+*.xlsx
+*.xls
+*.pdf
+*.docx

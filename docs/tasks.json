@@ -1,0 +1,197 @@
+{
+  "version": 1,
+  "updated": "2026-09-27",
+  "tasks": [
+    {
+      "id": "T01",
+      "title": "成熟系统适配评估与定制路线比较",
+      "status": "ready",
+      "owner": null,
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A09",
+        "A12"
+      ],
+      "scope": [
+        "docs/fit-gap.md"
+      ],
+      "deliverable": "4 小时时间盒的适配表，优先验证最接近的一套；给出维护、许可、Windows 体验和单据适配代价；未运行项标为未验证",
+      "evidence": []
+    },
+    {
+      "id": "T02",
+      "title": "领域模型、命令和库存不变量",
+      "status": "ready",
+      "owner": null,
+      "depends_on": [],
+      "blocked_by": [],
+      "acceptance": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A09",
+        "A10"
+      ],
+      "scope": [
+        "docs/domain-model.md"
+      ],
+      "deliverable": "对象关系、接单扣减/取消/实物发出候选状态图、D07 数量分层、事务边界；未确认的部分发货和单位规则保留标记",
+      "evidence": []
+    },
+    {
+      "id": "T03",
+      "title": "合成数据下的四屏流程原型",
+      "status": "queued",
+      "owner": null,
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A01",
+        "A02",
+        "A03",
+        "A09"
+      ],
+      "scope": [
+        "prototype/",
+        "docs/prototype.md"
+      ],
+      "deliverable": "库存、收货、出库、历史查询原型，标明模拟持久化；相关运行命令和截图",
+      "evidence": []
+    },
+    {
+      "id": "T04",
+      "title": "固定格式库存与验货导入验证",
+      "status": "queued",
+      "owner": null,
+      "depends_on": [
+        "T02"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A05",
+        "A07",
+        "A08"
+      ],
+      "scope": [
+        "import-spike/",
+        "fixtures/synthetic/",
+        "docs/import-contract.md"
+      ],
+      "deliverable": "合成模板解析、行级错误、预览、重复及修订单识别方案；真实样本仅限获准私有环境验证",
+      "evidence": []
+    },
+    {
+      "id": "T05",
+      "title": "锁定复用路线或部署与持久化架构",
+      "status": "queued",
+      "owner": null,
+      "depends_on": [
+        "T01",
+        "T02"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A06",
+        "A11",
+        "A13"
+      ],
+      "scope": [
+        "docs/DECISIONS.md",
+        "docs/deployment.md"
+      ],
+      "deliverable": "基于 2–3 台电脑选定集中服务路径及数据技术；服务器位置和离线承诺仍为部署待决项，记录备份升级和支持责任",
+      "evidence": []
+    },
+    {
+      "id": "T06",
+      "title": "收货移位订单过账的数据库实现",
+      "status": "blocked",
+      "owner": null,
+      "depends_on": [
+        "T05"
+      ],
+      "blocked_by": [
+        "Q03",
+        "Q04"
+      ],
+      "acceptance": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A09",
+        "A10",
+        "A14"
+      ],
+      "scope": [
+        "application/",
+        "docs/test-commands.md"
+      ],
+      "deliverable": "采用 T05 选定路径实现核心业务与真实数据库测试；范围目录由技术启动 ADR 一次确定",
+      "evidence": []
+    },
+    {
+      "id": "T07",
+      "title": "Windows 打包和恢复验证，打印作为可选集成",
+      "status": "blocked",
+      "owner": null,
+      "depends_on": [
+        "T06"
+      ],
+      "blocked_by": [
+        "Q01"
+      ],
+      "acceptance": [
+        "A11",
+        "A12",
+        "A13"
+      ],
+      "scope": [
+        "application/",
+        "docs/windows-delivery.md"
+      ],
+      "deliverable": "Windows 安装升级和备份恢复证据；板头纸保留预览/导出候选，专用打印机适配暂缓，不要求打印验收阻塞试用",
+      "evidence": []
+    },
+    {
+      "id": "T08",
+      "title": "期初迁移与单货主试运行",
+      "status": "blocked",
+      "owner": null,
+      "depends_on": [
+        "T04",
+        "T07"
+      ],
+      "blocked_by": [
+        "Q05"
+      ],
+      "acceptance": [
+        "A07",
+        "A08",
+        "A09",
+        "A11",
+        "A12",
+        "A13",
+        "A14"
+      ],
+      "scope": [
+        "docs/pilot.md"
+      ],
+      "deliverable": "先导入客户账后盘点的试运行；明确快照是否已扣未出货订单，避免双扣；切换对账、支持安排，真实数据不入库",
+      "evidence": []
+    }
+  ]
+}
