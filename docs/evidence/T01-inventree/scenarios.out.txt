@@ -1,0 +1,23 @@
+[fixture] OK  IPN keeps leading zeros as text
+[A10] OK  allocate 20 of 100
+[A10/D07] OK  after allocation: on-hand 100, allocated 20, available 80 (Decimal('100'), Decimal('20'), Decimal('80'))
+[A10/D07] OK  after shipping 20: on-hand 80, allocated 0, available 80 (no double deduction) (Decimal('80'), Decimal('0'), Decimal('80'))
+[A10] OK  cancel before ship releases allocation: available back to 100 (Decimal('100'), Decimal('0'), Decimal('100'))
+[A10] OK  second cancel is refused (order no longer open) can_cancel=False
+[A10/D07] NO  cancelled order keeps an allocation/reversal record per line allocations remaining after cancel=0 (deleted)
+[A10] OK  after partial ship 8: on-hand 92, allocated 12, available 80 (Decimal('92'), Decimal('12'), Decimal('80'))
+[A10] OK  cancel remaining 12: on-hand 92, available 92 (not 100) (Decimal('92'), Decimal('0'), Decimal('92'))
+[A10] NO  per-line cancel action exists on SalesOrderLineItem no per-line cancel method; only whole-order cancel or edit/delete line
+[A02] OK  employee-chosen A6 + B4: available = 4 (Decimal('14'), Decimal('10'), Decimal('4'))
+[A02] OK  after ship: on-hand 4 (B), allocated 0, available 4 (Decimal('4'), Decimal('0'), Decimal('4'))
+[A02] OK  remaining stock only at B-01 [('B-01', 4.0)]
+[A02] OK  move 2 of B4 to C-01 conserves total 4 [('B-01', 2.0), ('C-01', 2.0)]
+[A04] OK  stock tracking history recorded for ship/move tracking rows=8
+[A04] NO  shipped stock keeps a location snapshot shipped item locations=[None, None]
+[A06] OK  available 5: second allocation of 4 rejected {'items': [{'quantity': [ErrorDetail(string='Available quantity (1) exceeded', code='invalid')]}]}
+[A01] OK  quarantined (pending inspection) stock excluded from on-hand (Decimal('0'), Decimal('0'), Decimal('0'))
+[A01] NO  quarantined stock cannot be allocated allocation ACCEPTED
+[A01] OK  accepted stock still in RECEIVING can be allocated/shipped
+[A03] NO  StockItem has a consignor/owner-of-goods field distinct from permission owner fields: owner(permission)=True customer=True
+[A03] NO  order line pins expiry expiry only enforced by employee choosing the stock item
+[A05] NO  allocation API accepts an idempotency / operation id retry of the same POST creates a second allocation unless rejected by quantity

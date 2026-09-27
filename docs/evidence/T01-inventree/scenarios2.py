@@ -1,0 +1,10 @@
+exec(open('scenarios.py').read().split('# ---------- A10')[0])
+p = new_part('000130')
+it = StockItem.objects.create(part=p, location=locA, quantity=50)
+so, line, ship = new_so(p, 10)
+r1 = allocate(so, line, ship, it, 10); r2 = allocate(so, line, ship, it, 10)
+cnt = SalesOrderAllocation.objects.filter(line=line).count()
+print('[A05] same allocation POST twice ->', r1[0], r2[0], 'allocations=', cnt, 'allocated=', line.allocated_quantity() if hasattr(line,'allocated_quantity') else '?', 'line qty=10')
+ship.complete_shipment(user)
+for t in StockItemTracking.objects.filter(item__part=p).order_by('pk'):
+    print('[A04] tracking', t.tracking_type, t.deltas)
