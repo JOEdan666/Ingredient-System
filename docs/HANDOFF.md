@@ -7,7 +7,7 @@
 | 层 | 分支 | 基于 | 内容 |
 | --- | --- | --- | --- |
 | 1 | `docs/warehouse-agent-foundation` | main `9243eed` | 导入启动包 v0.3（提交 `0388a9e`） |
-| 2 | `agent/claude/T02-domain-model` | 第 1 层 | T02 领域模型（提交 `df4f155`） |
+| 2 | `agent/claude/T02-domain-model` | 第 1 层 | T02 领域模型（提交 `df4f155`，审查修正 `e592504`） |
 | 3 | `agent/claude/T01-fit-gap` | 第 2 层 | T01 适配评估、建议、实测证据、本交接 |
 
 叠放的原因：tasks.json 和本文件由几个任务共用，叠放可以避免合并冲突，T01 的建议也需要引用 T02。合并时请**从下往上**依次合并；下层合并后，GitHub 会把上层 PR 的目标分支自动改成 main。
@@ -19,6 +19,12 @@ PR 由用户在网页上创建草稿（本环境没有 `gh` CLI）。审查者�
 - **T02** → review：[domain-model.md](domain-model.md)。对象关系、D07 数量分层、订单行状态图、不变量 I1–I10、命令与事务、幂等、逐行取消、期初切换三种做法。只是设计，没有运行代码。
 - **T01** → review：[fit-gap.md](fit-gap.md)。InvenTree 1.5.6 用合成数据实测（[证据](evidence/T01-inventree/README.md)）；ERPNext 和 OpenBoxes 只核对了源码，未运行验证。
 - **建议**：第一版定制开发核心账务，集中服务 + 数据库。这只是给 T05 的输入，路线还没有锁定。
+
+## 审查记录
+
+- 2026-09-27 Codex（codex-reviewer，只读）审查了 T01 的 `47d6b96`。确认成立 3 条：ERPNext/OpenBoxes 的"源码"结论没有写出处，且有几处说过了头；"接受缺口就改走 ERPNext"推理不成立。已补上指向具体版本源码文件的链接，把"支持"改成"有对应字段（行为未运行）"，并改写退路。
+- Codex 还核实了 InvenTree 四条反例与源码一致，并指出"待检货可以被分配"只在接口层成立（网页表单默认过滤）。已在 T01、T02、RESEARCH 里写明。
+- 修正后的最终 SHA 需要重新审查；上面这次审查只对 `47d6b96` 有效。
 
 ## 可运行检查
 

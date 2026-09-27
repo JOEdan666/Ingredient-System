@@ -1,6 +1,6 @@
 # T01 成熟系统适配评估与定制路线比较
 
-任务：T01 · 作者：Claude Code · 日期：2026-09-27 · 基准：`df4f155`（叠在 T02 之上）
+任务：T01 · 作者：Claude Code · 日期：2026-09-27 · 基准：`e592504`（叠在 T02 之上）
 验收关联：A01 A02 A03 A04 A09 A12 · 决策关联：D01 D02 · 时间盒：4 小时，实际用了约 2 小时
 
 ## 证据等级
@@ -11,6 +11,11 @@
 | **源码** | 读了指定版本的源码或数据结构定义，**未运行验证** |
 | **未核查** | 没有查证，只是推测，不能作为依据 |
 
+源码出处（本次在线读取的具体文件，用于核对「源码」结论）：
+- ERPNext v16.36.0：[stock_reservation_entry.json](https://github.com/frappe/erpnext/blob/v16.36.0/erpnext/stock/doctype/stock_reservation_entry/stock_reservation_entry.json)（字段 `reserved_qty` `delivered_qty` `status` `sb_entries`）、[stock_reservation_entry.py](https://github.com/frappe/erpnext/blob/v16.36.0/erpnext/stock/doctype/stock_reservation_entry/stock_reservation_entry.py)（`get_available_qty_to_reserve`）、[sales_order.json](https://github.com/frappe/erpnext/blob/v16.36.0/erpnext/selling/doctype/sales_order/sales_order.json)（`reserve_stock`）、[batch.json](https://github.com/frappe/erpnext/blob/v16.36.0/erpnext/stock/doctype/batch/batch.json)（`expiry_date` `reference_doctype`）、[item.json](https://github.com/frappe/erpnext/blob/v16.36.0/erpnext/stock/doctype/item/item.json)（`is_customer_provided_item`）、[stock_ledger_entry.json](https://github.com/frappe/erpnext/blob/v16.36.0/erpnext/stock/doctype/stock_ledger_entry/stock_ledger_entry.json)（`warehouse` `batch_no` `voucher_*` `is_cancelled`）、`erpnext/locale/zh_TW.po`。
+- OpenBoxes v0.9.8-hotfix1：[ProductAvailability.groovy](https://github.com/openboxes/openboxes/blob/v0.9.8-hotfix1/grails-app/domain/org/pih/warehouse/product/ProductAvailability.groovy)（`Integer quantityOnHand` `quantityAllocated` `quantityOnHold` `quantityAvailableToPromise`，按 `binLocation`）、[InventoryItem.groovy](https://github.com/openboxes/openboxes/blob/v0.9.8-hotfix1/grails-app/domain/org/pih/warehouse/inventory/InventoryItem.groovy)（`lotNumber(nullable: true, unique: ['product'])`）、[gradle.properties](https://github.com/openboxes/openboxes/blob/v0.9.8-hotfix1/gradle.properties)（`grailsVersion=3.3.16`）、`grails-app/i18n/messages_zh.properties`。
+- 这些只是字段和配置层面的核对，**不等于行为验证**：例如 ERPNext 的预留在取消、部分发货时实际怎么变化，OpenBoxes 的唯一键在收货流程中是合并还是报错，都没有运行过。
+
 被评估的版本：InvenTree `1.5.6`（2026-09-26）· ERPNext `v16.36.0`（2026-09-23）· OpenBoxes `v0.9.8-hotfix1`（2026-08-14）。
 
 **只有 InvenTree 真正运行了**。本机没有 Docker；ERPNext 需要 MariaDB + Redis + bench，OpenBoxes 需要 Java + Tomcat + MySQL，这两套都**未运行验证**。先测 InvenTree 的理由：它最轻，许可证是 MIT，后端是 Python，而且"分配即占用"的模型从源码看最接近 D07。
@@ -19,7 +24,7 @@
 
 1. **D07 这套数量分层能在成熟系统里落地（实测）。** 在 InvenTree 上：实物 100，占用 20 后可用 80；发出后实物 80、可用仍是 80；先发 8 再取消余下 12，最后是 92。
 2. **但 InvenTree 在库存正确性的核心环节有 5 处不符合（实测）**：待检货可以被分配；同一请求重复提交会重复分配（一张 10 件的订单行最后发出了 20 件）；取消订单会**删除**分配记录；没有逐行取消；发货历史里没有记录当时的货位。另外，它没有"货主"这个概念，订单行也不能指定效期（源码字段检查）。
-3. ERPNext 的数据结构（预留单、不可改的库存流水、批次效期）在纸面上最完整（源码），但部署和维护最重，也没有原生的"货主"概念。OpenBoxes 的按货位分层数量最像 D07（源码），但数量只能是整数，框架是较老的 Grails 3.3。
+3. ERPNext 有预留单字段、带冲销标记的库存流水和批次效期（源码字段），但这些行为都没运行过；部署最重；在所读的字段里没有找到 3PL 意义上的"货主"。OpenBoxes 按货位记录实物、已分配、冻结、可承诺四个数（源码字段），数量字段声明为 `Integer`，框架是 Grails 3.3.16。这两套**都没有运行**，不能认为哪一套比实测过的 InvenTree 更合适。
 4. **建议：第一版走定制开发，但范围只限核心账务**（期初导入、收货、库存/货位、占用、出货、历史）。借鉴成熟系统的做法，但不复制代码。理由和退路见最后一节。
 
 ## 场景对比
@@ -28,14 +33,14 @@
 
 | # | 场景（验收） | InvenTree 1.5.6 | ERPNext v16.36.0 | OpenBoxes 0.9.8 | 定制 |
 | --- | --- | --- | --- | --- | --- |
-| S1 | 接单占用 → 发货不重复扣 → 取消释放（A10，D07） | **支持，实测**：100/20/80 → 80/0/80；取消后回到 100；部分发货后取消得到 92 | 支持，源码：Stock Reservation Entry 有 `reserved_qty` `delivered_qty` `status`；销售订单有 `reserve_stock` | 支持，源码：`ProductAvailability` 分 `quantityOnHand` `quantityAllocated` `quantityAvailableToPromise` | 按 T02 设计实现 |
+| S1 | 接单占用 → 发货不重复扣 → 取消释放（A10，D07） | **支持，实测**：100/20/80 → 80/0/80；取消后回到 100；部分发货后取消得到 92 | 有对应字段，源码（行为未运行）：Stock Reservation Entry 有 `reserved_qty` `delivered_qty` `status`；销售订单有 `reserve_stock` | 有对应字段，源码（行为未运行）：`ProductAvailability` 分 `quantityOnHand` `quantityAllocated` `quantityAvailableToPromise` | 按 T02 设计实现 |
 | S2 | 取消按订单行进行并保留记录（A10） | **不支持，实测**：只能整单取消，取消时 `SalesOrderAllocation` 被删除（0 条剩余）；没有逐行取消方法 | 未核查逐行取消；单据取消会保留原记录（官方不可改账本文档，R03） | 未核查 | T02 §6 |
 | S3 | 员工自选多货位（A02） | **支持，实测**：A 位 6 + B 位 4，发货后只剩 B 位 4 | 需配置：把货位建成子仓库（Warehouse 树）；源码 | 支持，源码：以货位 `binLocation` 为维度 | T02 |
 | S4 | 移位数量守恒（A02） | **支持，实测**：B 位 4 移 2 到 C 位，总量仍是 4 | 支持，Stock Entry（Material Transfer）；未运行 | 未核查 | T02 I5 |
-| S5 | 待检货不能出，已验收未上架的货可以出（A01） | **部分，实测**：已验收在收货区的货可以分配；**待检（QUARANTINED）的货也能被分配**，违反要求 | 未核查（Quality Inspection 是否拦截预留） | 未核查（有 `quantityOnHold`） | T02 I2 |
+| S5 | 待检货不能出，已验收未上架的货可以出（A01） | **部分，实测**：已验收在收货区的货可以分配。**直接调用分配接口时，待检（QUARANTINED）的货也能被分配**；网页分配表单默认用 `available: true` 过滤（源码 `SalesOrderForms.tsx:325` → `stock/api.py` 的 `IN_STOCK_FILTER`），会把它藏起来，所以这是服务端缺少校验，**网页流程未实测** | 未核查（Quality Inspection 是否拦截预留） | 未核查（有 `quantityOnHold`） | T02 I2 |
 | S6 | 货主隔离：同编码不同货主不能互扣（A03） | 需配置，源码：没有货主字段，`owner` 字段只管权限；只能每个货主建一套商品（编码加前缀） | 需配置：多公司或每货主一套 Item；`is_customer_provided_item` 是生产用途，不是 3PL 货主 | 未核查（有 `Organization`，但不是库存货主） | T02 I3 |
 | S7 | 订单指定效期不得改用别的效期（A03） | 需开发，源码：订单行没有效期字段，全靠员工选对 | 未核查 | 未核查 | T02 I8 |
-| S8 | 同效期不同收货来源分开追溯（A03，D04） | 支持：每次收货是一个 StockItem，效期和批号是它的属性；源码 | 源码：Batch 有 `expiry_date` 和 `reference_doctype/name`，按批号区分 | **有冲突，源码**：`InventoryItem` 的唯一键是（商品，批号），同一批号的多次收货会合并 | T02 StockLot |
+| S8 | 同效期不同收货来源分开追溯（A03，D04） | 支持：每次收货是一个 StockItem，效期和批号是它的属性；源码 | 源码：Batch 有 `expiry_date` 和 `reference_doctype/name`，按批号区分 | **有冲突，源码**：`InventoryItem` 的唯一键是（商品，批号），同一商品同一批号只能有一条批次记录，同批号的两次收货无法分开成两个批次身份（合并还是报错未运行验证） | T02 StockLot |
 | S9 | 重复提交 / 重试不重复扣（A05） | **不支持，实测**：同一分配提交两次，生成 2 条分配、共 20 件，超过订单行的 10 件，并且全部发出 | 未核查 | 未核查 | T02 §5 operation_id |
 | S10 | 并发抢同一批货（A06） | 部分：顺序提交时第二次被拒（**实测**，"Available quantity (1) exceeded"）；并发加锁 `lock_quantity()` 只看了源码，SQLite 上**未做并发实测** | 源码：`get_available_qty_to_reserve` 校验；加锁方式未核查 | 未核查 | 必须在目标数据库上实测 |
 | S11 | 发货后改货位名，旧单仍显示当时的来源（A04，A09） | **不支持，实测**：发货的历史记录只有 `quantity` `salesorder` `customer`，没有货位；发出的库存 `location` 为空 | 支持，源码：库存流水 SLE 有 `warehouse` `batch_no` `voucher_*` `is_cancelled` | 未核查 | T02 流水带 code 快照 |
@@ -62,7 +67,7 @@ InvenTree 是唯一实测过的，也最接近。要补齐的缺口是 S2 S5 S7 
 
 1. 本项目最在意的是 D07 数量正确、逐行取消留痕、重试不重复扣、历史可追溯。这些正好是 InvenTree 实测不合格的地方，要补就得改它的核心写入逻辑。
 2. 需要的领域不大（T02 列了约 15 个对象、10 条不变量），比整套 ERP 的配置和运维负担小。
-3. ERPNext 在纸面上最合适，但它没有运行验证、部署最重，而且对"周末开发、非全职维护"的现状风险更大。
+3. ERPNext 的字段看起来覆盖面广，但没有运行验证，部署最重，对"周末开发、非全职维护"的现状风险更大。字段齐全不代表行为符合。
 
 **定制的主要代价（必须接受才走这条路）：**
 
@@ -71,7 +76,7 @@ InvenTree 是唯一实测过的，也最接近。要补齐的缺口是 S2 S5 S7 
 
 **什么情况下改选成熟系统：**
 
-- 客户更看重"尽快能用、少维护"，并且愿意接受上面列出的缺口（例如由员工手工保证不重复分配、取消前人工记录）→ 改走 ERPNext，并先在 T05 用 `frappe_docker` 跑一遍 S1 S2 S9 S11。若考虑官方付费托管，需要先由用户确认费用。
+- 客户更看重"尽快能用、少维护"，并且愿意接受上面列出的缺口（例如由员工手工保证不重复分配、取消前人工记录）→ 回到成熟系统路线，但**先实测再选**：InvenTree 已测，要逐项确认缺口能否用插件补上或靠流程规避；ERPNext 必须先在 T05 用 `frappe_docker` 跑一遍 S1 S2 S5 S9 S11，跑通之前不能说它比 InvenTree 更合适。若考虑官方付费托管，需要先由用户确认费用。
 - 原型阶段（T03）发现核心账务的工作量明显超出预期 → 回到本表重新比较。
 
 这是给 T05 的输入，**不是已锁定的决定**。锁定路线属于 T05，需要用户和业务方确认。
