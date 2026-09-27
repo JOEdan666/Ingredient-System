@@ -72,3 +72,55 @@ ID / 日期 / 状态 / 触发问题 / 选项与代价 / 选择与证据 / 影响
 期初导入加快照时间与未盘点标记；以后盘点差异以调整流水记录，不覆盖期初。
 尤其确认客户导出数字是实物还是已扣订单的可用量，及快照前未出货订单是否已扣。切换必须定义截点和未完成订单清单，防止导入客户已扣库存后又重放订单扣第二次。
 影响：T04/T08、A08。
+
+## D09 定制路线的服务端与数据库技术选型
+
+日期：2026-09-27 · 任务：T05 · 状态：**候选，待业务确认路线**。
+前提：T01 建议第一版定制核心账务（[fit-gap.md](fit-gap.md)），但路线还没有由业务锁定（见 HANDOFF 的"路线"问题）。如果业务改选成熟系统，本条作废，按 D02 保留该系统受支持的数据库和服务架构。部署形态、备份与断网行为见 [deployment.md](deployment.md)。
+
+标记：**[事实]** 有官方文档或源码出处（写链接和查阅日期）；**[候选]** 工程判断，可改；**[待确认]** 需要业务答复；**[未核查]** 只是推测。本条没有运行任何应用代码或数据库测试，所有技术判断都是**未运行验证**。
+
+### 触发问题
+
+2–3 台 Windows 电脑要共用一份权威库存（D02）。T02 已经定下命令就是事务、在锁内重新读、按 operation_id 实现幂等、流水只追加（[domain-model.md](domain-model.md) 第 5 节）。现在要选一个具体的后端，使这些规则容易写对、能在真实 PostgreSQL 上测、非全职的维护者也能长期维护。
+
+### 共同部分（不管选哪个后端）
+
+- **数据库：PostgreSQL 18**，[候选]。[事实] 18.0 的发布日期是 2025-09-25，当前小版本 18.6 发布于 2026-08-13（[release-18.sgml，REL_18_STABLE](https://github.com/postgres/postgres/blob/REL_18_STABLE/doc/src/sgml/release-18.sgml)，查阅 2026-09-27）；Docker 官方镜像有 `postgres:18.6` 标签（[Docker Hub](https://hub.docker.com/_/postgres)，查阅 2026-09-27）。[未核查] PostgreSQL 每个大版本支持约 5 年：官方版本政策页 postgresql.org/support/versioning 在本环境被网络代理拦截，没能核对，T06 开工前需补查。19 目前只有 beta，不选。
+- **并发做法**，[候选]：默认隔离级别 READ COMMITTED + 显式行锁。命令在一个事务里：先插入 Operation 行（主键 operation_id；重复请求会在唯一索引上等待，前一个提交后报唯一冲突；这时当前事务已中止，要回滚后在新事务里读出原结果返回，并核对 payload 哈希），再按固定顺序 `SELECT … FOR UPDATE` 锁住商品级占用行和涉及的余额行，在锁内重新读取并检查 I1–I10，再写流水。数据库 CHECK 约束（如 on_hand ≥ 0、allocated ≤ on_hand）作为最后一道防线。不选 SERIALIZABLE + 自动重试，因为重试逻辑对新手更难写对、更难排查；如果 T06 的并发测试显示显式锁有遗漏，再评估。
+- **客户端**，[候选]：第一版用浏览器（Windows 上的 Edge/Chrome）访问集中服务。Tauri 等 Windows 外壳放到后面：它不改变"断网就不能写库存"（D02），只是多一个安装包要维护。
+- **禁止**用 SQLite 或内存数据库来证明锁和并发（AGENTS.md）。
+
+### 候选比较
+
+| 维度 | A. Python + Django 5.2 LTS | B. Python + FastAPI + SQLAlchemy 2 + Alembic | C. TypeScript + Node 24 LTS（Fastify/NestJS + Kysely/Drizzle/Prisma） |
+| --- | --- | --- | --- |
+| 版本与支持期 | [事实] 5.2 是 LTS，发布后至少 3 年有安全更新（[5.2 发行说明](https://github.com/django/django/blob/stable/5.2.x/docs/releases/5.2.txt)，查阅 2026-09-27）；PyPI 上 5.2 系列最新是 5.2.17，另有 6.1.1（[PyPI](https://pypi.org/project/Django/)，查阅 2026-09-27）。Django 5.2 支持 PostgreSQL 14 及以上、psycopg 3.1.8+（[databases.txt](https://github.com/django/django/blob/stable/5.2.x/docs/ref/databases.txt)），支持 Python 3.10–3.14 | [事实] FastAPI 仍是 0.x 版本（PyPI 最新 0.141.1），SQLAlchemy 2.1.1、Alembic 1.20.0（PyPI，查阅 2026-09-27）。没有 LTS 概念 | [事实] Node 24 是 LTS，Node 22 是上一个 LTS，Node 26 是 Current（[nodejs.org](https://nodejs.org/en/about/previous-releases)，查阅 2026-09-27）。npm 上 `pg` 8.23.0、`kysely` 0.29.6、`drizzle-orm` 0.45.3、`prisma` 最新标签为 8.0.0-rc.17、`typescript` 7.0.2（npm registry，查阅 2026-09-27）。ORM 大多仍是 0.x |
+| T02 事务 / 锁 / 幂等的实现难度 | 低。[事实] 自带 `transaction.atomic` 和 `select_for_update()`（[transactions.txt](https://github.com/django/django/blob/stable/5.2.x/docs/topics/db/transactions.txt)、[querysets.txt](https://github.com/django/django/blob/stable/5.2.x/docs/ref/models/querysets.txt)）。[候选] 唯一约束、CHECK 约束都能写在模型里并进迁移 | 中。SQLAlchemy 同样有事务和 `with_for_update`，但会话、事务范围、连接池要自己组装和约定，容易出现"一个命令用了两个会话"的错误 [未核查，工程判断] | 中到高。[事实] Kysely 有 `forUpdate()`（[源码](https://github.com/kysely-org/kysely/blob/master/src/query-builder/select-query-builder.ts)），Drizzle 有 `.for('update')`（[源码](https://github.com/drizzle-team/drizzle-orm/blob/main/drizzle-orm/src/pg-core/query-builders/select.ts)）。[未核查] Prisma 对行锁的支持没有查。事务里所有查询必须用同一个连接对象，异步代码里漏传一次就会在事务外执行，这类错误在测试里不一定暴露 |
+| 真实 PostgreSQL 并发测试 | 方便。pytest-django 的 `transactional_db` / `TransactionTestCase` 让测试里的多个线程各自提交真实事务（[候选] 测试方案见下）；迁移自动建测试库 | 可以，但测试库创建、清理、事务夹具都要自己写 | 可以（vitest/jest + `pg`），测试夹具和建库同样要自己写 |
+| 新手长期维护 | 最好。一个框架包含迁移、登录与权限（A14）、后台管理页面（主数据维护可以先用它，少写界面）、表单校验；LTS 升级节奏明确。T01 已经实际运行过一个 Django 系统（InvenTree 1.5.6），读过它的锁和迁移 | 中。每块都自己选、自己接，框架本身 0.x，升级可能有破坏性改动 | 中偏差。前后端都用 TypeScript 是优点；但 ORM、测试、构建工具换得快，没有一个组合有长期支持承诺；TypeScript 7 刚换了编译器实现 [未核查对本项目的实际影响] |
+| Windows 客户端接入 | 浏览器直接访问；以后要做 Tauri 外壳也只是调用同一套 HTTP 接口 | 同左 | 同左；如果以后做 Tauri + React，前后端同语言是加分项 |
+| 服务器部署 | Linux 容器或 Windows 均可运行 [未运行验证]；需要一个 WSGI/ASGI 服务进程 | 同左 | Node 在 Windows/Linux 都能跑 [未运行验证] |
+
+### 选择与理由
+
+**[候选] 选 A：Python 3.13 + Django 5.2 LTS + psycopg 3 + PostgreSQL 18。**
+
+1. 本项目的风险集中在"事务里锁对、重新读、只写一次"（A05 A06 A10）。Django 把事务、行锁、约束、迁移放在一个有 LTS 的框架里，手写的连接和会话管理最少。
+2. 登录、权限和后台管理是 A14 与主数据维护必需的，Django 自带，定制路线的最大代价（全部自己做）因此缩小一块。
+3. 维护者只需要掌握一种服务端语言。第一版界面可以用 Django 模板直接渲染 [候选]；领域命令写成独立的服务函数，同时暴露为 JSON 接口（带 operation_id），以后换 React 或加 Tauri 外壳时不用改账务核心。
+4. Python 3.13：在 Django 5.2 支持范围内，不选刚出的版本 [候选]。确切的小版本、依赖锁文件由 T06 写入 `docs/test-commands.md`。
+
+不选 B：能力和 A 相近，但登录、权限、迁移、后台都要自己拼，对新手不划算。不选 C：前后端同语言的好处在第一版（浏览器、服务端渲染）用不上，而库的迭代速度和事务内连接传递的风险是实际成本。
+
+### 影响
+
+- T06：按本条和 [deployment.md](deployment.md) 的"T06 测试基线"建立 `application/`、依赖锁文件、`docs/test-commands.md` 和数据库测试工作流。
+- T03 原型：如果已经用别的技术做了原型，原型只用于演示流程和数量含义，账务核心仍按本条实现。
+- 验收：A06（真实 PostgreSQL 并发）、A11（备份、升级恢复）、A13（断网行为）、A14（权限在服务层）。
+
+### 回退办法
+
+- **路线改为成熟系统**：本条作废，不保留两套后端（D02）。
+- **Django 在 T06 暴露问题**（例如 ORM 生成的锁语句达不到 A06，或某条不变量只能靠大量原始 SQL 实现）：领域命令本来就写成独立服务函数、并用原始 SQL 可读的表结构，可以先在 Django 里对个别命令改用原始 SQL；如果问题普遍，再换 B（同为 Python，数据表和测试用例可以大部分保留）。换框架前要有失败的测试作为证据，不凭感觉换。
+- **PostgreSQL 18 在某个部署环境拿不到**（例如某个托管服务只提供 17）：Django 5.2 支持 14 及以上，可以降到 17，并在 CI 里用同一个大版本重新跑并发测试。
