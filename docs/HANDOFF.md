@@ -16,7 +16,7 @@
 
 ## 本次完成（T05，第 4 层）
 
-- 分支 `agent/claude/T05-architecture`，基于 `22b1403`。内容提交 `__CONTENT_SHA__`；分支最终 SHA 以 PR 页面为准（本文件的 SHA 回填是最后一个提交，不能写自己的 SHA）。
+- 分支 `agent/claude/T05-architecture`，基于 `22b1403`。内容提交 `be11393`；分支最终 SHA 以 PR 页面为准（本文件的 SHA 回填是最后一个提交，不能写自己的 SHA）。
 - **D09**（[DECISIONS.md](DECISIONS.md)）：状态"候选，待业务确认路线"。比较了 Django 5.2 LTS、FastAPI + SQLAlchemy、TypeScript/Node 24 三个后端；候选选择 Python 3.13 + Django 5.2 LTS + psycopg 3 + PostgreSQL 18，READ COMMITTED + 显式行锁 + Operation 唯一键实现幂等；写了回退办法。
 - **[deployment.md](deployment.md)**：局域网与云端两种形态（选择待 Q01）、断网时禁止写库存的具体行为、备份/恢复演练/升级/回退流程、支持责任占位、T06 测试基线（PostgreSQL 18.6 服务容器、并发测试写法与用例表、Windows runner 职责边界）。
 - 官方资料查阅日期均为 2026-09-27，链接写在文中。postgresql.org、docs.github.com、djangoproject.com 在本环境被网络代理拦截，改为读取 GitHub 上的官方源文件；PostgreSQL 大版本 5 年支持政策**没能核对**，已标为未核查。
