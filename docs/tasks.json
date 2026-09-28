@@ -5,8 +5,8 @@
     {
       "id": "T01",
       "title": "成熟系统适配评估与定制路线比较",
-      "status": "ready",
-      "owner": null,
+      "status": "review",
+      "owner": "claude (assigned by JOEdan, 2026-09-27 session)",
       "depends_on": [],
       "blocked_by": [],
       "acceptance": [
@@ -21,7 +21,10 @@
         "docs/fit-gap.md"
       ],
       "deliverable": "4 小时时间盒的适配表，优先验证最接近的一套；给出维护、许可、Windows 体验和单据适配代价；未运行项标为未验证",
-      "evidence": []
+      "evidence": [
+        "docs/fit-gap.md",
+        "docs/evidence/T01-inventree/ (InvenTree 1.5.6 run on synthetic data; ERPNext/OpenBoxes source-only, not run)"
+      ]
     },
     {
       "id": "T02",

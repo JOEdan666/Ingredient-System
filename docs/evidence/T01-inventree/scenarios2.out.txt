@@ -1,0 +1,8 @@
+[A05] same allocation POST twice -> True True allocations= 2 allocated= 20 line qty=10
+[A04] tracking 1 {'status': 10, 'quantity': 50.0}
+[A04] tracking 40 {'stockitem': 13, 'quantity': 10.0}
+[A04] tracking 42 {'removed': 10.0, 'quantity': 30.0}
+[A04] tracking 40 {'stockitem': 13, 'quantity': 10.0}
+[A04] tracking 42 {'removed': 10.0, 'quantity': 30.0}
+[A04] tracking 60 {'quantity': 10.0, 'salesorder': 9, 'customer': 1, 'customer_name': 'DEMO-CUSTOMER'}
+[A04] tracking 60 {'quantity': 10.0, 'salesorder': 9, 'customer': 1, 'customer_name': 'DEMO-CUSTOMER'}

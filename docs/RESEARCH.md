@@ -13,6 +13,11 @@
 
 已读取许可证：InvenTree MIT；OpenBoxes EPL-1.0；ERPNext 仓库标注 GPL-3.0。没有复制这些项目的源码进入本仓库。后续代码复用须按所选修订的实际许可保留通知并确认分发方式；不把“公开可看”当成无条件可复制。
 
+## T01 结果（2026-09-27）
+
+适配表和建议见 [fit-gap.md](fit-gap.md)。InvenTree 1.5.6 用合成数据实际运行了验收场景，证据在 [evidence/T01-inventree/](evidence/T01-inventree/README.md)；ERPNext v16.36.0 和 OpenBoxes v0.9.8-hotfix1 只核对了源码字段，未运行验证。
+新增实测反例：InvenTree 1.5.6 中，直接调用接口时待检库存可以被分配（网页表单默认过滤，服务端不拦）；重复提交会重复分配并超出订单行数量；取消订单会删除分配记录；发货历史不保存货位。这些反例对应 T02 的 I2、I4、I7 和 A01、A05、A10、A04，将作为本项目的负面测试。
+
 ## 源码观察
 
 ### R01 InvenTree 库存拆分与并发
