@@ -5,7 +5,7 @@
 ## 当前状态
 
 - `main` = `b620443`：启动包、T02、T01、T05 已按 #2 → #3 → #4 → #1 顺序合并。
-- **T03 进行中**：分支 `agent/claude/T03-prototype`，基于 `main` `b620443`，owner `claude-cloud`，只有这个会话写入。草稿 PR 指向 `main`（建好后在下面写编号）。
+- **T03 进行中**：分支 `agent/claude/T03-prototype`，基于 `main` `b620443`，owner `claude-cloud`，只有这个会话写入。草稿 PR [#6](https://github.com/JOEdan666/Ingredient-System/pull/6) 指向 `main`，未合并。
 - tasks.json（本分支第一个提交）：T01、T02 → done（已合并，evidence 未改）；T05 → review（owner `claude-cloud`，evidence 为 D09 和 deployment.md）；T03 → in_progress。T05 合并后的最终 SHA 仍待 Codex 复审（见下方审查记录）。
 
 ## T03 进度（每一步提交后更新）
@@ -17,7 +17,7 @@
 | 3. 领域模块 `prototype/inventory/domain.py`（D07、I1–I11、operation_id 幂等、对账 `check_invariants`）+ 合成数据加载 | 完成 |
 | 4. 四个页面（库存、收货、出库+订单处理、历史查询）+ 页面流程测试 | 完成 |
 | 5. [prototype.md](prototype.md)、截图 `docs/screenshots/t03-*.png`（4 张，合成数据） | 完成 |
-| 6. 草稿 PR 指向 main | 见下一次提交 |
+| 6. 草稿 PR [JOEdan666/Ingredient-System#6](https://github.com/JOEdan666/Ingredient-System/pull/6) 指向 main；内容提交 `0a5899d`，最终 SHA 以 PR 页面为准 | 完成 |
 
 ## 审查记录（仍有效的部分）
 
