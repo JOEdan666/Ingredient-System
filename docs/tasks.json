@@ -74,7 +74,7 @@
       ],
       "deliverable": "库存、收货、出库、历史查询原型，标明模拟持久化；相关运行命令和截图",
       "evidence": [
-        "docs/prototype.md (pytest 42 passed on SQLite; simulated persistence, no concurrency proof)",
+        "docs/prototype.md §6 (pytest 42 passed on SQLite, macOS rerun after review fixes; simulated persistence, no concurrency proof)",
         "docs/screenshots/t03-*.png (synthetic data)",
         "PR #6 reviews: Claude reviewer routine comment 5872276215; Codex review (local)"
       ]

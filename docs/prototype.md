@@ -15,7 +15,7 @@
 
 ## 1. 结论
 
-- **[已验证]** D07 的数量分层在原型里按 T02 设计实现，用例全部通过：实物 100，接单 20 后可用 80，发货后实物 80、可用仍 80；先发 8 再取消剩余 12，实物和可用都是 92；重复取消只释放一次；同一 operation_id 重复提交只生效一次，同 id 不同内容被拒绝；待检货不能分配；指定效期不能换成别的效期。pytest 共 36 条，全部通过（第 6 节）。
+- **[已验证]** D07 的数量分层在原型里按 T02 设计实现，用例全部通过：实物 100，接单 20 后可用 80，发货后实物 80、可用仍 80；先发 8 再取消剩余 12，实物和可用都是 92；重复取消只释放一次；同一 operation_id 重复提交只生效一次，同 id 不同内容被拒绝；待检货不能分配；指定效期不能换成别的效期。pytest 共 42 条（审查修正后），全部通过（第 6 节）。
 - **[已验证]** 四个页面能在本机运行，截图见第 4 节。页面只调用领域模块，不自己算数量。
 - **[未运行验证]** PostgreSQL、并发、Windows 上运行、打印、PDF/Excel 导入，都没有做。
 - **[待确认]** 最重要的问题仍是 Q03：员工口中的「库存」指哪个数（第 8 节）。
@@ -30,7 +30,7 @@ uv sync                                   # 按 uv.lock 安装到 prototype/.ven
 uv run python manage.py migrate           # 建本机 SQLite：prototype/prototype.sqlite3（已被 .gitignore 忽略）
 uv run python manage.py load_synthetic    # 载入 fixtures/synthetic/stock.json（可重复运行，按 operation_id 不会重复入账）
 uv run python manage.py runserver         # 打开 http://127.0.0.1:8000/
-uv run pytest                             # 运行测试（36 条）
+uv run pytest                             # 运行测试（42 条）
 ```
 
 - 本次在 Linux 云容器上实际运行了以上命令（`runserver` 用 127.0.0.1:8765 截图）。**[未运行验证]** Windows 上的同样命令：uv 和 Django 支持 Windows，但本次没有在 Windows 上运行。
@@ -57,7 +57,7 @@ uv run pytest                             # 运行测试（36 条）
 | [prototype/inventory/models.py](../prototype/inventory/models.py) | 表结构，对应 domain-model.md 第 1 节；数据库 CHECK 约束 |
 | [prototype/inventory/views.py](../prototype/inventory/views.py) | 页面：只解析表单、调用 domain / queries |
 | [prototype/inventory/synthetic.py](../prototype/inventory/synthetic.py) | 通过领域命令载入合成夹具；文件没有 `synthetic: true` 就拒绝 |
-| [prototype/tests/](../prototype/tests/test_domain.py) | `test_domain.py`（27 条）、`test_pages.py`（9 条） |
+| [prototype/tests/](../prototype/tests/test_domain.py) | `test_domain.py`（29 条）、`test_pages.py`（13 条） |
 
 ## 4. 四个页面
 
@@ -110,60 +110,60 @@ uv run pytest                             # 运行测试（36 条）
 | A05 幂等 | `Operation` 表以 operation_id 为主键，在事务开始时先插入；同 id 同内容返回原结果，同 id 不同内容拒绝；被拒绝的命令整体回滚，不留下 Operation 行 | `test_c_*`、`test_d_*`、`test_rejected_*` |
 | 对账 | `check_invariants()` 用流水和占用流水重算余额、占用、可售并比对。每个测试结束时都运行，必须为空 | 全部测试；`test_reconciliation_*` 故意篡改后能查出 |
 
-测试能分辨对错的抽查（本次手工做了两次临时变异，未提交）：让发货不减少占用 → 4 条失败、3 条出错；去掉「已无可取消数量」检查和「待检不能分配」检查 → 3 条失败、1 条出错。还原后 36 条全部通过。
+**审查修正（2026-09-28，`6b8f005`）**：`move_stock` 和 `change_condition` 原来先锁来源余额行、再锁目标行，分两步加锁，在 PostgreSQL 上 A→B 与 B→A 两个并发移位可能死锁；现改为先创建目标行（不加锁），再把来源和目标**一次按 id 排序锁住**（`test_*_in_one_sorted_step`）。页面层的分配、取消会校验订单行属于当前订单，表单里非数字的编号会被拒绝而不是报 500（`test_*_another_order_*`、`test_non_numeric_ids_*`）。**SQLite 上锁不生效，死锁本身没有被运行验证**，测试检查的是加锁调用的顺序。
+
+测试能分辨对错的抽查（本次手工做了两次临时变异，未提交）：让发货不减少占用 → 4 条失败、3 条出错；去掉「已无可取消数量」检查和「待检不能分配」检查 → 3 条失败、1 条出错。还原后当时的 36 条全部通过（修正前）。
 
 ## 6. pytest 实际输出
 
 2026-09-28，在 Linux 云容器上运行 `cd prototype && uv run pytest -v -p no:cacheprovider`（路径已替换为 `<repo>`）：
 
+2026-09-28 审查修正后（提交 `6b8f005`），本机 Claude Code 在 macOS（Python 3.13.5、Django 5.2.17、pytest 9.1.1、pytest-django 4.14.0，pip 安装）上重新运行 `python -m pytest -v`，输出如下（只保留结果行）。修正前云端运行结果为 36 passed（Linux，uv）；本轮新增 6 条回归测试，用修正前的代码运行这 6 条全部失败。
+
 ```
-============================= test session starts ==============================
-platform linux -- Python 3.13.12, pytest-9.1.1, pluggy-1.6.0 -- <repo>/prototype/.venv/bin/python
-django: version: 5.2.17, settings: proto_site.settings (from ini)
-rootdir: <repo>/prototype
-configfile: pytest.ini
-testpaths: tests
-plugins: django-4.14.0
-collecting ... collected 36 items
-
 tests/test_domain.py::test_a_accept_20_of_100_then_ship_keeps_available_80 PASSED [  2%]
-tests/test_domain.py::test_a10_cancel_before_ship_returns_to_100 PASSED  [  5%]
-tests/test_domain.py::test_b_ship_8_then_cancel_remaining_12_ends_at_92 PASSED [  8%]
-tests/test_domain.py::test_c_same_cancel_submitted_twice_releases_once PASSED [ 11%]
-tests/test_domain.py::test_c_second_full_cancel_with_new_id_changes_nothing PASSED [ 13%]
-tests/test_domain.py::test_d_same_operation_id_applies_once PASSED       [ 16%]
-tests/test_domain.py::test_d_same_operation_id_different_content_is_rejected PASSED [ 19%]
-tests/test_domain.py::test_d_duplicate_allocation_cannot_over_allocate_line PASSED [ 22%]
-tests/test_domain.py::test_e_pending_inspection_stock_cannot_be_allocated PASSED [ 25%]
-tests/test_domain.py::test_e_inspection_pass_makes_stock_allocatable_in_receiving PASSED [ 27%]
-tests/test_domain.py::test_unknown_condition_is_rejected_not_treated_as_available PASSED [ 30%]
-tests/test_domain.py::test_f_requested_expiry_cannot_be_swapped PASSED   [ 33%]
-tests/test_domain.py::test_f_accept_rejected_when_requested_expiry_short PASSED [ 36%]
-tests/test_domain.py::test_f_unspecified_line_cannot_take_stock_reserved_for_an_expiry PASSED [ 38%]
-tests/test_domain.py::test_a01_notice_adds_nothing_receipt_counts_and_receiving_stock_ships PASSED [ 41%]
-tests/test_domain.py::test_a02_multi_location_allocation_and_move_with_fixture PASSED [ 44%]
-tests/test_domain.py::test_fixture_load_is_idempotent PASSED             [ 47%]
-tests/test_domain.py::test_a03_other_owner_stock_cannot_be_allocated PASSED [ 50%]
-tests/test_domain.py::test_a03_owner_b_cannot_order_owner_a_stock_by_same_code PASSED [ 52%]
-tests/test_domain.py::test_a03_same_expiry_different_receipts_stay_separate_lots PASSED [ 55%]
-tests/test_domain.py::test_i10_allocated_stock_cannot_be_moved PASSED    [ 58%]
-tests/test_domain.py::test_i11_accept_beyond_available_is_rejected PASSED [ 61%]
-tests/test_domain.py::test_i11_hold_cannot_push_reserved_above_sellable PASSED [ 63%]
-tests/test_domain.py::test_i1_i2_cannot_allocate_more_than_free PASSED   [ 66%]
-tests/test_domain.py::test_i7_posted_rows_are_append_only PASSED         [ 69%]
-tests/test_domain.py::test_rejected_command_writes_nothing_and_leaves_no_operation PASSED [ 72%]
-tests/test_domain.py::test_reconciliation_detects_tampered_projection PASSED [ 75%]
-tests/test_pages.py::test_every_page_shows_simulation_notice[inventory] PASSED [ 77%]
-tests/test_pages.py::test_every_page_shows_simulation_notice[receiving] PASSED [ 80%]
-tests/test_pages.py::test_every_page_shows_simulation_notice[outbound] PASSED [ 83%]
-tests/test_pages.py::test_every_page_shows_simulation_notice[history] PASSED [ 86%]
-tests/test_pages.py::test_inventory_defaults_to_available_with_expandable_detail PASSED [ 88%]
-tests/test_pages.py::test_full_outbound_flow_and_history PASSED          [ 91%]
-tests/test_pages.py::test_double_submit_same_form_is_replayed_not_repeated PASSED [ 94%]
-tests/test_pages.py::test_rejection_is_shown_and_writes_nothing PASSED   [ 97%]
-tests/test_pages.py::test_receiving_flow_notice_receipt_inspection PASSED [100%]
-
-============================== 36 passed in 3.31s ==============================
+tests/test_domain.py::test_a10_cancel_before_ship_returns_to_100 PASSED  [  4%]
+tests/test_domain.py::test_b_ship_8_then_cancel_remaining_12_ends_at_92 PASSED [  7%]
+tests/test_domain.py::test_c_same_cancel_submitted_twice_releases_once PASSED [  9%]
+tests/test_domain.py::test_c_second_full_cancel_with_new_id_changes_nothing PASSED [ 11%]
+tests/test_domain.py::test_d_same_operation_id_applies_once PASSED       [ 14%]
+tests/test_domain.py::test_d_same_operation_id_different_content_is_rejected PASSED [ 16%]
+tests/test_domain.py::test_d_duplicate_allocation_cannot_over_allocate_line PASSED [ 19%]
+tests/test_domain.py::test_e_pending_inspection_stock_cannot_be_allocated PASSED [ 21%]
+tests/test_domain.py::test_e_inspection_pass_makes_stock_allocatable_in_receiving PASSED [ 23%]
+tests/test_domain.py::test_unknown_condition_is_rejected_not_treated_as_available PASSED [ 26%]
+tests/test_domain.py::test_f_requested_expiry_cannot_be_swapped PASSED   [ 28%]
+tests/test_domain.py::test_f_accept_rejected_when_requested_expiry_short PASSED [ 30%]
+tests/test_domain.py::test_f_unspecified_line_cannot_take_stock_reserved_for_an_expiry PASSED [ 33%]
+tests/test_domain.py::test_a01_notice_adds_nothing_receipt_counts_and_receiving_stock_ships PASSED [ 35%]
+tests/test_domain.py::test_a02_multi_location_allocation_and_move_with_fixture PASSED [ 38%]
+tests/test_domain.py::test_fixture_load_is_idempotent PASSED             [ 40%]
+tests/test_domain.py::test_a03_other_owner_stock_cannot_be_allocated PASSED [ 42%]
+tests/test_domain.py::test_a03_owner_b_cannot_order_owner_a_stock_by_same_code PASSED [ 45%]
+tests/test_domain.py::test_a03_same_expiry_different_receipts_stay_separate_lots PASSED [ 47%]
+tests/test_domain.py::test_i10_allocated_stock_cannot_be_moved PASSED    [ 50%]
+tests/test_domain.py::test_i11_accept_beyond_available_is_rejected PASSED [ 52%]
+tests/test_domain.py::test_i11_hold_cannot_push_reserved_above_sellable PASSED [ 54%]
+tests/test_domain.py::test_i1_i2_cannot_allocate_more_than_free PASSED   [ 57%]
+tests/test_domain.py::test_i7_posted_rows_are_append_only PASSED         [ 59%]
+tests/test_domain.py::test_rejected_command_writes_nothing_and_leaves_no_operation PASSED [ 61%]
+tests/test_domain.py::test_reconciliation_detects_tampered_projection PASSED [ 64%]
+tests/test_domain.py::test_move_locks_source_and_destination_in_one_sorted_step PASSED [ 66%]
+tests/test_domain.py::test_condition_change_locks_both_rows_in_one_sorted_step PASSED [ 69%]
+tests/test_pages.py::test_every_page_shows_simulation_notice[inventory] PASSED [ 71%]
+tests/test_pages.py::test_every_page_shows_simulation_notice[receiving] PASSED [ 73%]
+tests/test_pages.py::test_every_page_shows_simulation_notice[outbound] PASSED [ 76%]
+tests/test_pages.py::test_every_page_shows_simulation_notice[history] PASSED [ 78%]
+tests/test_pages.py::test_inventory_defaults_to_available_with_expandable_detail PASSED [ 80%]
+tests/test_pages.py::test_full_outbound_flow_and_history PASSED          [ 83%]
+tests/test_pages.py::test_double_submit_same_form_is_replayed_not_repeated PASSED [ 85%]
+tests/test_pages.py::test_rejection_is_shown_and_writes_nothing PASSED   [ 88%]
+tests/test_pages.py::test_receiving_flow_notice_receipt_inspection PASSED [ 90%]
+tests/test_pages.py::test_cancel_with_line_of_another_order_is_rejected PASSED [ 92%]
+tests/test_pages.py::test_allocate_with_line_of_another_order_is_rejected PASSED [ 95%]
+tests/test_pages.py::test_non_numeric_ids_in_form_are_rejected_not_500[allocate-pick_abc] PASSED [ 97%]
+tests/test_pages.py::test_non_numeric_ids_in_form_are_rejected_not_500[ship-ship_abc] PASSED [100%]
+============================== 42 passed in 1.30s ==============================
 ```
 
 这些测试**不包括**：并发测试（A06，需要 PostgreSQL）、Windows、浏览器兼容性。
