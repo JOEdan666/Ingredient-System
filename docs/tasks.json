@@ -26,8 +26,8 @@
     {
       "id": "T02",
       "title": "领域模型、命令和库存不变量",
-      "status": "ready",
-      "owner": null,
+      "status": "review",
+      "owner": "claude (assigned by JOEdan, 2026-09-27 session)",
       "depends_on": [],
       "blocked_by": [],
       "acceptance": [
@@ -44,7 +44,10 @@
         "docs/domain-model.md"
       ],
       "deliverable": "对象关系、接单扣减/取消/实物发出候选状态图、D07 数量分层、事务边界；未确认的部分发货和单位规则保留标记",
-      "evidence": []
+      "evidence": [
+        "docs/domain-model.md (design only, not executed)",
+        "D07 arithmetic run on InvenTree 1.5.6 with synthetic data: see T01 docs/evidence/T01-inventree/"
+      ]
     },
     {
       "id": "T03",
