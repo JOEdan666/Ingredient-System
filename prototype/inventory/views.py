@@ -55,7 +55,7 @@ def inventory_page(request):
     f = {k: request.GET.get(k, "").strip() for k in ("owner", "product", "lot", "expiry", "location", "condition")}
     show_zero = request.GET.get("show_zero") == "1"
     return render(request, "inventory/inventory.html", _ctx(
-        request, f=f, show_zero=show_zero,
+        request, f=f, show_zero=show_zero, expand=request.GET.get("expand") == "1",
         summaries=queries.product_summaries(owner=f["owner"], product=f["product"]),
         balances=queries.balance_rows(show_zero=show_zero, **f),
     ))

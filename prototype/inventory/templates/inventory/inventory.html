@@ -13,7 +13,7 @@
   <div><br><button>查询</button> <a href="{% url 'inventory' %}">清除</a></div>
 </form>
 
-<h2>按商品：可用数量</h2>
+<h2>按商品：可用数量 <a class="muted" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&amp;{% endif %}expand=1">全部展开</a></h2>
 <div class="card">
 <table>
   <tr><th>货主</th><th>商品</th><th>名称</th><th class="num">可用</th><th>明细</th></tr>
@@ -21,7 +21,7 @@
   <tr>
     <td>{{ s.owner }}</td><td>{{ s.product }}</td><td>{{ s.name }}</td>
     <td class="num big">{{ s.available }} <span class="muted">{{ s.unit }}</span></td>
-    <td><details><summary>展开实物 / 占用</summary>
+    <td><details {% if expand %}open{% endif %}><summary>展开实物 / 占用</summary>
       <table>
         <tr><td>实物（全部状态、全部货位）</td><td class="num">{{ s.on_hand }}</td></tr>
         <tr><td>其中不可售（待检/冻结/不合格）</td><td class="num">{{ s.not_sellable }}</td></tr>
@@ -48,7 +48,7 @@
     <td>{{ b.expiry|date:"Y-m-d"|default:"未知" }}</td><td>{{ b.location }} <span class="muted">{{ b.location_kind }}</span></td>
     <td><span class="tag {{ b.condition }}">{{ b.condition_label }}</span></td>
     <td class="num big">{% if b.sellable %}{{ b.free }}{% else %}<span class="muted">不可售</span>{% endif %}</td>
-    <td><details><summary>实物 / 占用</summary>实物 {{ b.on_hand }} · 已分配 {{ b.allocated }}<br><span class="muted">来源：{{ b.lot_source }}</span></details></td>
+    <td><details {% if expand %}open{% endif %}><summary>实物 / 占用</summary>实物 {{ b.on_hand }} · 已分配 {{ b.allocated }}<br><span class="muted">来源：{{ b.lot_source }}</span></details></td>
     <td>{% if b.free_physical %}
       <form method="post" action="{% url 'move' %}" class="inline">{% include "inventory/_op.html" %}
         <input type="hidden" name="balance_id" value="{{ b.id }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">

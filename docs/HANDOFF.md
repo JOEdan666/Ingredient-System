@@ -16,7 +16,7 @@
 | 2. Django 项目骨架、依赖锁文件（uv.lock：Django 5.2.17、pytest 9.1.1、pytest-django 4.14.0；Python 3.13.12） | 完成 | 见 git log |
 | 3. 领域模块 `inventory/domain.py`（D07、I1–I11、operation_id 幂等、对账 `check_invariants`）+ 合成数据加载 + pytest 27 条（SQLite，全部通过） | 完成 | 见 git log |
 | 4. 四个页面（库存、收货、出库+订单处理、历史查询）+ 页面流程测试；pytest 共 36 条通过 | 完成 | 见 git log |
-| 5. docs/prototype.md、截图 | 未开始 | |
+| 5. 截图（docs/screenshots/t03-*.png，4 张，合成数据）完成；docs/prototype.md 进行中 | 进行中 | 见 git log |
 | 6. 草稿 PR | 未开始 | |
 
 ## 审查记录（仍有效的部分）
