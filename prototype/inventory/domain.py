@@ -157,6 +157,15 @@ def _lock_balances(balance_ids) -> dict[int, StockBalance]:
     return {r.pk: r for r in rows}
 
 
+def _ensure_balance(owner, product, lot, location, condition) -> int:
+    """Create the balance row if needed, WITHOUT locking it, so the caller can
+    lock source and destination together in one sorted step (T02 §5)."""
+    balance, _ = StockBalance.objects.get_or_create(
+        owner=owner, product=product, lot=lot, location=location, condition=condition
+    )
+    return balance.pk
+
+
 def _balance_for(owner, product, lot, location, condition) -> StockBalance:
     balance, _ = StockBalance.objects.get_or_create(
         owner=owner, product=product, lot=lot, location=location, condition=condition
@@ -436,10 +445,15 @@ def change_condition(*, operation_id, actor, balance_id, qty, to_condition) -> C
             raise DomainError("same_condition", "目标状态与当前状态相同。")
         touches_sellable = Condition.AVAILABLE in (src_peek.condition, target)
         pas = _lock_availability([src_peek.product_id]) if touches_sellable else {}
-        src = _lock_balances([balance_id])[balance_id]
+        dst_id = _ensure_balance(src_peek.owner, src_peek.product, src_peek.lot, src_peek.location, target)
+        locked = _lock_balances([balance_id, dst_id])  # one sorted step: no A->B / B->A deadlock
+        src, dst = locked[balance_id], locked[dst_id]
+        if src.condition != src_peek.condition:
+            # condition is part of a balance row's key and is never updated;
+            # this guards the pre-lock decision above if that ever changes.
+            raise DomainError("stale_condition", "库存状态在加锁前后不一致，请重试。")
         if qty > src.free:
             raise DomainError("insufficient_free", f"可改状态的数量只有 {src.free}（已分配的部分不能改，I2/I10）。")
-        dst = _balance_for(src.owner, src.product, src.lot, src.location, target)
         _movement(op, StockMovement.Kind.CONDITION_OUT, src, -qty, actor)
         _movement(op, StockMovement.Kind.CONDITION_IN, dst, qty, actor)
         src.on_hand -= qty
@@ -464,15 +478,19 @@ def move_stock(*, operation_id, actor, balance_id, qty, to_location_code) -> Com
     def fn(op):
         _positive_int(qty, "移位数量")
         to_location = _get_location(to_location_code)
-        src = _lock_balances([balance_id])[balance_id]
-        if src.location_id == to_location.pk:
+        src_peek = StockBalance.objects.filter(pk=balance_id).first()
+        if src_peek is None:
+            raise DomainError("balance_missing", "库存记录不存在。")
+        if src_peek.location_id == to_location.pk:
             raise DomainError("same_location", "目标货位与来源货位相同。")
+        dst_id = _ensure_balance(src_peek.owner, src_peek.product, src_peek.lot, to_location, src_peek.condition)
+        locked = _lock_balances([balance_id, dst_id])  # one sorted step: no A->B / B->A deadlock
+        src, dst = locked[balance_id], locked[dst_id]
         if qty > src.free:
             raise DomainError(
                 "insufficient_free",
                 f"可移动的数量只有 {src.free}；已被订单分配的库存不能移位（I10），请先改分配。",
             )
-        dst = _balance_for(src.owner, src.product, src.lot, to_location, src.condition)
         _movement(op, StockMovement.Kind.MOVE_OUT, src, -qty, actor)
         _movement(op, StockMovement.Kind.MOVE_IN, dst, qty, actor)
         src.on_hand -= qty

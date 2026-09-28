@@ -352,3 +352,39 @@ def test_reconciliation_detects_tampered_projection(world):
     problems = domain.check_invariants()
     assert any("流水合计" in p for p in problems)
     StockBalance.objects.filter(pk=bal.pk).update(on_hand=5)  # restore so the fixture teardown passes
+
+
+# --- Review fixes (2026-09-28, PR #6 review by Codex and the Claude reviewer routine) ---
+
+def _record_lock_calls(monkeypatch):
+    calls = []
+    real = domain._lock_balances
+
+    def spy(ids):
+        calls.append(sorted(set(ids)))
+        return real(ids)
+
+    monkeypatch.setattr(domain, "_lock_balances", spy)
+    return calls
+
+
+def test_move_locks_source_and_destination_in_one_sorted_step(world, monkeypatch):
+    # T02 §5: lock all balance rows of a command together in id order. Locking the
+    # source first and the destination later lets A->B and B->A moves deadlock
+    # on PostgreSQL. SQLite cannot show the deadlock, so check the lock calls.
+    world.opening(5, location="A-01")
+    moving = world.opening(3, location="B-01")
+    calls = _record_lock_calls(monkeypatch)
+    res = domain.move_stock(operation_id=new_op(), actor=ACTOR, balance_id=moving.pk, qty=1,
+                            to_location_code="A-01")
+    dest = res.result["to_balance_id"]
+    assert calls == [sorted([moving.pk, dest])]   # one call, both rows, id order
+
+
+def test_condition_change_locks_both_rows_in_one_sorted_step(world, monkeypatch):
+    pending = world.opening(4, location="RECEIVING", condition="PENDING_INSPECTION")
+    world.opening(2, location="RECEIVING", condition="AVAILABLE")
+    calls = _record_lock_calls(monkeypatch)
+    domain.change_condition(operation_id=new_op(), actor=ACTOR, balance_id=pending.pk, qty=4,
+                            to_condition="AVAILABLE")
+    assert len(calls) == 1 and len(calls[0]) == 2

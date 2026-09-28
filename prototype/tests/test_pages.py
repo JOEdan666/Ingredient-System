@@ -100,3 +100,40 @@ def test_receiving_flow_notice_receipt_inspection(client, loaded):
     resp = post(client, "change_condition", {"balance_id": new.pk, "qty": "8", "to_condition": "AVAILABLE"})
     assert "改状态完成" in resp.content.decode()
     assert StockBalance.objects.get(lot__expiry_date="2028-03-01", condition="AVAILABLE").on_hand == 8
+
+
+# --- Review fixes (2026-09-28): tampered forms must be rejected, not act on another order or crash ---
+
+def _two_orders(client):
+    post(client, "accept_order", {"owner": "DEMO-OWNER-A", "number": "SYN-O-X", "product_1": "000123", "qty_1": "1"})
+    post(client, "accept_order", {"owner": "DEMO-OWNER-A", "number": "SYN-O-Y", "product_1": "000123", "qty_1": "1"})
+    return Order.objects.get(number="SYN-O-X"), Order.objects.get(number="SYN-O-Y")
+
+
+def test_cancel_with_line_of_another_order_is_rejected(client, loaded):
+    order_x, order_y = _two_orders(client)
+    line_y = order_y.lines.get()
+    resp = post(client, "cancel_line", {"line_id": line_y.pk, "qty": "1", "reason": "UNPAID"}, order_id=order_x.pk)
+    assert "不属于当前订单" in resp.content.decode()
+    line_y.refresh_from_db()
+    assert line_y.qty_cancelled == 0
+
+
+def test_allocate_with_line_of_another_order_is_rejected(client, loaded):
+    order_x, order_y = _two_orders(client)
+    line_y = order_y.lines.get()
+    a01 = StockBalance.objects.get(location__code="A-01", owner__code="DEMO-OWNER-A")
+    resp = post(client, "allocate", {"line_id": line_y.pk, f"pick_{a01.pk}": "1"}, order_id=order_x.pk)
+    assert "不属于当前订单" in resp.content.decode()
+    assert not Allocation.objects.filter(order_line=line_y).exists()
+
+
+@pytest.mark.parametrize("name,field", [("allocate", "pick_abc"), ("ship", "ship_abc")])
+def test_non_numeric_ids_in_form_are_rejected_not_500(client, loaded, name, field):
+    order_x, _ = _two_orders(client)
+    data = {field: "1"}
+    if name == "allocate":
+        data["line_id"] = order_x.lines.get().pk
+    resp = post(client, name, data, order_id=order_x.pk)
+    assert resp.status_code == 200
+    assert "必须是整数" in resp.content.decode()
