@@ -1,0 +1,68 @@
+{% extends "inventory/base.html" %}
+{% block title %}库存{% endblock %}
+{% block content %}
+<h1>库存</h1>
+<form method="get" class="card grid">
+  <label>货主<br><select name="owner"><option value="">全部</option>{% for o in owners %}<option {% if f.owner == o.code %}selected{% endif %}>{{ o.code }}</option>{% endfor %}</select></label>
+  <label>商品编码<br><input name="product" value="{{ f.product }}"></label>
+  <label>批次（L编号或批号）<br><input name="lot" value="{{ f.lot }}"></label>
+  <label>效期<br><input type="date" name="expiry" value="{{ f.expiry }}"></label>
+  <label>货位<br><select name="location"><option value="">全部</option>{% for l in locations %}<option {% if f.location == l.code %}selected{% endif %}>{{ l.code }}</option>{% endfor %}</select></label>
+  <label>状态<br><select name="condition"><option value="">全部</option>{% for v, t in conditions %}<option value="{{ v }}" {% if f.condition == v %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+  <label><input type="checkbox" name="show_zero" value="1" {% if show_zero %}checked{% endif %}> 显示数量为 0 的行</label>
+  <div><br><button>查询</button> <a href="{% url 'inventory' %}">清除</a></div>
+</form>
+
+<h2>按商品：可用数量</h2>
+<div class="card">
+<table>
+  <tr><th>货主</th><th>商品</th><th>名称</th><th class="num">可用</th><th>明细</th></tr>
+  {% for s in summaries %}
+  <tr>
+    <td>{{ s.owner }}</td><td>{{ s.product }}</td><td>{{ s.name }}</td>
+    <td class="num big">{{ s.available }} <span class="muted">{{ s.unit }}</span></td>
+    <td><details><summary>展开实物 / 占用</summary>
+      <table>
+        <tr><td>实物（全部状态、全部货位）</td><td class="num">{{ s.on_hand }}</td></tr>
+        <tr><td>其中不可售（待检/冻结/不合格）</td><td class="num">{{ s.not_sellable }}</td></tr>
+        <tr><td>可售实物（合格，含未上架）</td><td class="num">{{ s.sellable }}</td></tr>
+        <tr><td>占用合计</td><td class="num">{{ s.reserved }}</td></tr>
+        <tr><td>　已选批次/货位、未发</td><td class="num">{{ s.reserved_allocated }}</td></tr>
+        <tr><td>　已接单、未选货位</td><td class="num">{{ s.reserved_unallocated }}</td></tr>
+        <tr><td><strong>可用 = 可售实物 − 占用</strong></td><td class="num"><strong>{{ s.available }}</strong></td></tr>
+      </table>
+    </details></td>
+  </tr>
+  {% empty %}<tr><td colspan="5">没有数据。可以按下面的按钮载入合成数据。</td></tr>{% endfor %}
+</table>
+</div>
+
+<h2>按批次 / 效期 / 货位 / 状态</h2>
+<p class="note">「可分配」= 这一行的实物 − 已分配到这一行的数量。已接单但还没选货位的占用只算在上面的商品汇总里，不摊到单行（待业务确认显示方式，Q03）。</p>
+<div class="card">
+<table>
+  <tr><th>货主</th><th>商品</th><th>批次</th><th>批号</th><th>效期</th><th>货位</th><th>状态</th><th class="num">可分配</th><th>明细</th><th>移位</th></tr>
+  {% for b in balances %}
+  <tr>
+    <td>{{ b.owner }}</td><td>{{ b.product }}</td><td title="{{ b.lot_source }}">{{ b.lot }}</td><td>{{ b.external_lot }}</td>
+    <td>{{ b.expiry|date:"Y-m-d"|default:"未知" }}</td><td>{{ b.location }} <span class="muted">{{ b.location_kind }}</span></td>
+    <td><span class="tag {{ b.condition }}">{{ b.condition_label }}</span></td>
+    <td class="num big">{% if b.sellable %}{{ b.free }}{% else %}<span class="muted">不可售</span>{% endif %}</td>
+    <td><details><summary>实物 / 占用</summary>实物 {{ b.on_hand }} · 已分配 {{ b.allocated }}<br><span class="muted">来源：{{ b.lot_source }}</span></details></td>
+    <td>{% if b.free_physical %}
+      <form method="post" action="{% url 'move' %}" class="inline">{% include "inventory/_op.html" %}
+        <input type="hidden" name="balance_id" value="{{ b.id }}"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <input type="number" name="qty" min="1" max="{{ b.free_physical }}" placeholder="数量" required>
+        <select name="to_location">{% for l in locations %}{% if l.code != b.location %}<option>{{ l.code }}</option>{% endif %}{% endfor %}</select>
+        <button class="secondary">移位</button>
+      </form>{% else %}<span class="muted">已全部分配，不能移位</span>{% endif %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="10">没有符合条件的库存。</td></tr>{% endfor %}
+</table>
+</div>
+
+<form method="post" action="{% url 'reset_synthetic' %}" onsubmit="return confirm('清空本机原型数据并重新载入合成数据？');">
+  {% csrf_token %}<button class="danger">仅原型：清空并重新载入合成数据</button>
+  <span class="muted">来源 fixtures/synthetic/stock.json（synthetic: true）</span>
+</form>
+{% endblock %}

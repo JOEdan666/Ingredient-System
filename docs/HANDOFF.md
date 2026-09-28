@@ -15,7 +15,7 @@
 | 1. tasks.json 状态、HANDOFF | 完成 | 见 git log |
 | 2. Django 项目骨架、依赖锁文件（uv.lock：Django 5.2.17、pytest 9.1.1、pytest-django 4.14.0；Python 3.13.12） | 完成 | 见 git log |
 | 3. 领域模块 `inventory/domain.py`（D07、I1–I11、operation_id 幂等、对账 `check_invariants`）+ 合成数据加载 + pytest 27 条（SQLite，全部通过） | 完成 | 见 git log |
-| 4. 四个页面 | 未开始 | |
+| 4. 四个页面（库存、收货、出库+订单处理、历史查询）+ 页面流程测试；pytest 共 36 条通过 | 完成 | 见 git log |
 | 5. docs/prototype.md、截图 | 未开始 | |
 | 6. 草稿 PR | 未开始 | |
 
@@ -31,7 +31,7 @@
 
 ## 下一步（一项）
 
-做四个页面（`prototype/inventory/views.py` 只调用 domain 和 queries），页面顶部写明"模拟持久化，不证明并发和锁"。
+写 `docs/prototype.md`（安装运行、依赖版本、pytest 实际输出、模拟部分、Q03 等界面问题），尝试截图。
 
 ## 阻塞后续阶段的业务问题
 

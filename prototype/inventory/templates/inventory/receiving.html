@@ -1,0 +1,58 @@
+{% extends "inventory/base.html" %}
+{% block title %}收货{% endblock %}
+{% block content %}
+<h1>收货：预告 → 实收 → 待检 / 合格</h1>
+<p class="note">预告只是预计到货，<strong>不增加库存</strong>（I9）。实收时选「待检」则不能出货；选「合格」即使还在收货区（未上架）也可以直接分配出货。</p>
+
+<h2>1. 新建预告</h2>
+<form method="post" action="{% url 'create_notice' %}" class="card">
+  {% include "inventory/_op.html" %}
+  <label>货主 <select name="owner">{% for o in owners %}<option>{{ o.code }}</option>{% endfor %}</select></label>
+  <label>预告单号 <input name="number" required placeholder="例如 SYN-ASN-1"></label>
+  <table>
+    <tr><th>#</th><th>商品编码</th><th>预计数量</th><th>预计效期</th><th>批号（可空）</th></tr>
+    {% for i in "123" %}<tr><td>{{ i }}</td><td><input name="product_{{ i }}" {% if i == "1" %}required{% endif %}></td>
+      <td><input type="number" name="qty_{{ i }}" min="1"></td><td><input type="date" name="expiry_{{ i }}"></td><td><input name="lot_{{ i }}"></td></tr>{% endfor %}
+  </table>
+  <button>保存预告</button>
+</form>
+
+<h2>2. 实收</h2>
+{% for n in notices %}
+<div class="card">
+  <strong>{{ n.number }}</strong> · {{ n.owner }} <span class="muted">预告人 {{ n.created_by }} · {{ n.created_at|date:"Y-m-d H:i" }}</span>
+  <table>
+    <tr><th>行</th><th>商品</th><th class="num">预计</th><th class="num">已实收</th><th class="num">差异</th><th>预计效期</th><th>实收记录</th><th>登记实收</th></tr>
+    {% for l in n.lines %}
+    <tr>
+      <td>{{ l.line_no }}</td><td>{{ l.product }}</td><td class="num">{{ l.qty_expected }}</td><td class="num">{{ l.received }}</td>
+      <td class="num">{{ l.difference }}</td><td>{{ l.expiry|date:"Y-m-d"|default:"未知" }}</td>
+      <td>{% for r in l.receipts %}<div>{{ r.qty }} · {{ r.condition }} · {{ r.location }} · {{ r.lot }} · 效期 {{ r.expiry|date:"Y-m-d"|default:"未知" }} · {{ r.actor }} {{ r.at|date:"m-d H:i" }}</div>{% empty %}<span class="muted">尚未实收</span>{% endfor %}</td>
+      <td><form method="post" action="{% url 'confirm_receipt' %}" class="inline">{% include "inventory/_op.html" %}
+        <input type="hidden" name="notice_line_id" value="{{ l.id }}">
+        <input type="number" name="qty" min="1" placeholder="实收数量" required>
+        <input type="date" name="expiry" value="{{ l.expiry|date:'Y-m-d' }}" title="实收效期（以实物为准）">
+        <input name="external_lot" value="{{ l.external_lot }}" placeholder="批号" size="8">
+        <select name="location">{% for loc in locations %}<option {% if loc.code == "RECEIVING" %}selected{% endif %}>{{ loc.code }}</option>{% endfor %}</select>
+        <select name="condition"><option value="PENDING_INSPECTION">待检</option><option value="AVAILABLE">合格</option></select>
+        <button>确认实收</button></form></td>
+    </tr>{% endfor %}
+  </table>
+</div>
+{% empty %}<p class="muted">还没有预告。</p>{% endfor %}
+
+<h2>3. 待检货物：验货结果</h2>
+<div class="card">
+<table>
+  <tr><th>货主</th><th>商品</th><th>批次</th><th>效期</th><th>货位</th><th class="num">待检数量</th><th>验货</th></tr>
+  {% for b in pending %}
+  <tr><td>{{ b.owner }}</td><td>{{ b.product }}</td><td>{{ b.lot }}</td><td>{{ b.expiry|date:"Y-m-d"|default:"未知" }}</td><td>{{ b.location }}</td><td class="num">{{ b.on_hand }}</td>
+    <td><form method="post" action="{% url 'change_condition' %}" class="inline">{% include "inventory/_op.html" %}
+      <input type="hidden" name="balance_id" value="{{ b.id }}">
+      <input type="number" name="qty" min="1" max="{{ b.on_hand }}" value="{{ b.on_hand }}" required>
+      <select name="to_condition"><option value="AVAILABLE">合格</option><option value="DAMAGED">不合格</option><option value="HOLD">冻结</option></select>
+      <button>保存验货结果</button></form></td></tr>
+  {% empty %}<tr><td colspan="7" class="muted">没有待检货物。</td></tr>{% endfor %}
+</table>
+</div>
+{% endblock %}

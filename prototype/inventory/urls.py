@@ -1,3 +1,20 @@
 from django.urls import path
 
-urlpatterns = []
+from . import views
+
+urlpatterns = [
+    path("", views.inventory_page, name="inventory"),
+    path("move/", views.move, name="move"),
+    path("reset-synthetic/", views.reset_synthetic, name="reset_synthetic"),
+    path("receiving/", views.receiving_page, name="receiving"),
+    path("receiving/notice/", views.create_notice, name="create_notice"),
+    path("receiving/receipt/", views.confirm_receipt, name="confirm_receipt"),
+    path("receiving/condition/", views.change_condition, name="change_condition"),
+    path("outbound/", views.outbound_page, name="outbound"),
+    path("outbound/accept/", views.accept_order, name="accept_order"),
+    path("outbound/<int:order_id>/", views.order_page, name="order_detail"),
+    path("outbound/<int:order_id>/allocate/", views.allocate, name="allocate"),
+    path("outbound/<int:order_id>/ship/", views.ship, name="ship"),
+    path("outbound/<int:order_id>/cancel/", views.cancel_line, name="cancel_line"),
+    path("history/", views.history_page, name="history"),
+]
