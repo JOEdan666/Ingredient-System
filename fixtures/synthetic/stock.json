@@ -1,0 +1,12 @@
+{
+  "synthetic":true,
+  "description":"完全虚构，仅用于领域与界面试验；不得用作期初实账。",
+  "stock":[
+    {"owner":"DEMO-OWNER-A","sku":"000123","receipt_line":"DEMO-R1-1","lot":"DEMO-LOT-1","expiry":"2027-09-02","location":"A-01","condition":"available","unit":"EA","quantity":6},
+    {"owner":"DEMO-OWNER-A","sku":"000123","receipt_line":"DEMO-R1-1","lot":"DEMO-LOT-1","expiry":"2027-09-02","location":"B-01","condition":"available","unit":"EA","quantity":8},
+    {"owner":"DEMO-OWNER-A","sku":"000123","receipt_line":"DEMO-R2-1","lot":"DEMO-LOT-2","expiry":"2027-09-02","location":"RECEIVING","condition":"pending_inspection","unit":"EA","quantity":3},
+    {"owner":"DEMO-OWNER-B","sku":"000123","receipt_line":"DEMO-R3-1","lot":"DEMO-LOT-3","expiry":"2028-01-15","location":"A-01","condition":"available","unit":"EA","quantity":20}
+  ],
+  "order":{"owner":"DEMO-OWNER-A","number":"DEMO-O1","sku":"000123","quantity":10,"unit":"EA","requested_expiry":"2027-09-02"},
+  "example_unit_conversion":{"sku":"DEMO-BOX","from":"CS","to":"EA","factor":12,"confirmed_for_synthetic_only":true}
+}
