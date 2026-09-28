@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "updated": "2026-09-27",
+  "updated": "2026-09-28",
   "tasks": [
     {
       "id": "T01",
       "title": "成熟系统适配评估与定制路线比较",
-      "status": "review",
+      "status": "done",
       "owner": "claude (assigned by JOEdan, 2026-09-27 session)",
       "depends_on": [],
       "blocked_by": [],
@@ -29,7 +29,7 @@
     {
       "id": "T02",
       "title": "领域模型、命令和库存不变量",
-      "status": "review",
+      "status": "done",
       "owner": "claude (assigned by JOEdan, 2026-09-27 session)",
       "depends_on": [],
       "blocked_by": [],
@@ -55,8 +55,8 @@
     {
       "id": "T03",
       "title": "合成数据下的四屏流程原型",
-      "status": "queued",
-      "owner": null,
+      "status": "in_progress",
+      "owner": "claude-cloud",
       "depends_on": [
         "T01",
         "T02"
@@ -100,8 +100,8 @@
     {
       "id": "T05",
       "title": "锁定复用路线或部署与持久化架构",
-      "status": "queued",
-      "owner": null,
+      "status": "review",
+      "owner": "claude-cloud",
       "depends_on": [
         "T01",
         "T02"
@@ -117,7 +117,10 @@
         "docs/deployment.md"
       ],
       "deliverable": "基于 2–3 台电脑选定集中服务路径及数据技术；服务器位置和离线承诺仍为部署待决项，记录备份升级和支持责任",
-      "evidence": []
+      "evidence": [
+        "docs/DECISIONS.md D09",
+        "docs/deployment.md"
+      ]
     },
     {
       "id": "T06",

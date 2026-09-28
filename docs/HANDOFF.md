@@ -1,56 +1,37 @@
 # 当前交接
 
-更新：2026-09-27（Claude Code，T05 分支是当前最新的一层）。
+更新：2026-09-28（Claude Code 云端会话，T03 进行中）。
 
-## 分支与提交（叠放，由下到上）
+## 当前状态
 
-| 层 | 分支 | 基于 | 内容 |
-| --- | --- | --- | --- |
-| 1 | `docs/warehouse-agent-foundation` | main `9243eed` | 导入启动包 v0.3（提交 `0388a9e`） |
-| 2 | `agent/claude/T02-domain-model` | 第 1 层 | T02 领域模型（提交 `df4f155`，审查修正 `e592504`） |
-| 3 | `agent/claude/T01-fit-gap` | 第 2 层 | T01 适配评估、建议、实测证据（最终 `22b1403`） |
-| 4 | `agent/claude/T05-architecture` | 第 3 层 `22b1403` | T05 技术选型 ADR（D09）、部署与测试基线、本交接 |
+- `main` = `b620443`：启动包、T02、T01、T05 已按 #2 → #3 → #4 → #1 顺序合并。
+- **T03 进行中**：分支 `agent/claude/T03-prototype`，基于 `main` `b620443`，owner `claude-cloud`，只有这个会话写入。草稿 PR 指向 `main`（建好后在下面写编号）。
+- tasks.json（本分支第一个提交）：T01、T02 → done（已合并，evidence 未改）；T05 → review（owner `claude-cloud`，evidence 为 D09 和 deployment.md）；T03 → in_progress。T05 合并后的最终 SHA 仍待 Codex 复审（见下方审查记录）。
 
-叠放的原因：tasks.json 和本文件由几个任务共用，叠放可以避免合并冲突，T01 的建议也需要引用 T02。合并时请**从下往上**依次合并；下层合并后，GitHub 会把上层 PR 的目标分支自动改成 main。
-前三层的 PR 由用户在网页上创建草稿；T05 的草稿 PR 由 Claude 通过 GitHub 工具创建，base 为第 3 层。审查者应核对每个 PR 的**最终 SHA**。
+## T03 进度（每一步提交后更新）
 
-## 本次完成（T05，第 4 层）
+| 步骤 | 状态 | 提交 |
+| --- | --- | --- |
+| 1. tasks.json 状态、HANDOFF | 完成 | 见 git log |
+| 2. Django 项目骨架、依赖锁文件 | 未开始 | |
+| 3. 领域模块（D07、I1–I11、operation_id 幂等）+ pytest | 未开始 | |
+| 4. 四个页面 | 未开始 | |
+| 5. docs/prototype.md、截图 | 未开始 | |
+| 6. 草稿 PR | 未开始 | |
 
-- 分支 `agent/claude/T05-architecture`，基于 `22b1403`。内容提交 `be11393`；分支最终 SHA 以 PR 页面为准（本文件的 SHA 回填是最后一个提交，不能写自己的 SHA）。
-- **D09**（[DECISIONS.md](DECISIONS.md)）：状态"候选，待业务确认路线"。比较了 Django 5.2 LTS、FastAPI + SQLAlchemy、TypeScript/Node 24 三个后端；候选选择 Python 3.13 + Django 5.2 LTS + psycopg 3 + PostgreSQL 18，READ COMMITTED + 显式行锁 + Operation 唯一键实现幂等；写了回退办法。
-- **[deployment.md](deployment.md)**：局域网与云端两种形态（选择待 Q01）、断网时禁止写库存的具体行为、备份/恢复演练/升级/回退流程、支持责任占位、T06 测试基线（PostgreSQL 18.6 服务容器、并发测试写法与用例表、Windows runner 职责边界）。
-- 官方资料查阅日期均为 2026-09-27，链接写在文中。postgresql.org、docs.github.com、djangoproject.com 在本环境被网络代理拦截，改为读取 GitHub 上的官方源文件；PostgreSQL 大版本 5 年支持政策**没能核对**，已标为未核查。
-- **tasks.json 里 T05 仍是 `queued`**：它依赖的 T01、T02 还在 review，改成 in_progress 或 review 会让 `check_project.py` 失败。T01/T02 合并并标为 done 后，再把 T05 改为 review 并填 owner 和 evidence（`docs/DECISIONS.md#d09`、`docs/deployment.md`）。
+## 审查记录（仍有效的部分）
 
-## 之前完成（T01、T02）
-
-- **T02** → review：[domain-model.md](domain-model.md)。只是设计，没有运行代码。
-- **T01** → review：[fit-gap.md](fit-gap.md)。InvenTree 1.5.6 用合成数据实测；ERPNext 和 OpenBoxes 只核对了源码，未运行验证。建议第一版定制核心账务，路线尚未锁定。
-
-## 审查记录
-
-- 2026-09-27 Codex（codex-reviewer，只读）审查了 T01 的 `47d6b96`。确认成立 3 条：ERPNext/OpenBoxes 的"源码"结论没有写出处，且有几处说过了头；"接受缺口就改走 ERPNext"推理不成立。已补上指向具体版本源码文件的链接，把"支持"改成"有对应字段（行为未运行）"，并改写退路。
-- Codex 还核实了 InvenTree 四条反例与源码一致，并指出"待检货可以被分配"只在接口层成立（网页表单默认过滤）。已在 T01、T02、RESEARCH 里写明。
-- 修正后的最终 SHA 需要重新审查；上面这次审查只对 `47d6b96` 有效。
-- 2026-09-28 Codex 审查 T05 的 `e3974b0`，确认 4 条缺陷，**均已修正，修正后的 SHA 待重新审查**：
-  1. 商品级占用没有共享加锁点 → D09 改为先锁 ProductAvailability 行（引用 T02 提交 `2e6eb45`），检查范围 I1–I11；deployment.md 7.3 的并发用例加入"接单时还没选货位"情形。
-  2. 升级回退可能丢已提交数据 → deployment.md 6.1 增加第 3 步：撤销应用用户 CONNECT、断开连接、确认 pg_stat_activity 为 0 后再备份；6.3 改为以此为前提。
-  3. CI 可能 0 条测试也绿灯 → 7.2 增加硬性要求：必须执行 pytest、0 条失败、并发测试按标记计数不足即失败。
-  4. Barrier 不能证明并发 → 7.3 要求锁内读取后、写入前的测试钩子，断言 B 在 pg_stat_activity/pg_locks 中等锁，并加去掉 FOR UPDATE 必须失败的反例测试。
-- 2026-09-28 Codex 复审 `426a47f` 与 T02 `2e6eb45`：原第 1 条在 T02 里还不完整（加锁清单漏了收货、期初导入、冲正/调整；新商品可能没有汇总行），已在 T02 `1d3b4f9` 修正。原第 2 条的 REVOKE 做法有漏洞，改为停掉应用服务后确认无连接。原第 4 条补上 B 的"到达加锁点"信号。Codex 称"现有 CI 没有 pytest"，经核实不成立：应用和 `docs/test-commands.md` 是 T06 的交付物，T05 只写方案。
-- **写入者交接**：云端 Claude 会话交活后，本机 Claude Code 接手本分支完成上面这一轮修正。云端会话不再写本分支。
-- 注意：`2e6eb45`、`1d3b4f9` 在 T02 分支上，不在本分支历史里；下层合并后本分支才能看到 domain-model.md 的对应内容。
+- T05：Codex 审查 `e3974b0` 的 4 条已修正；复审 `426a47f` 的问题在 T02 `1d3b4f9` 和 T05 `c30e537` 修正。修正后的最终 SHA 待重新审查。
+- T01：Codex 审查 `47d6b96` 确认的 3 条在 `22b1403` 修正；修正后未重新审查。
 
 ## 可运行检查
 
-- T05 分支：`python scripts/check_project.py` 开工前基线和提交前都是 PASS（8 项任务、14 项验收定义）；`git diff --check` 无输出。实际输出见 PR。这些只校验文档和任务格式。
-- T05 **没有运行**：任何应用代码、PostgreSQL、GitHub Actions 服务容器工作流、并发测试、备份恢复、升级、Windows 安装。deployment.md 第 7 节的工作流骨架未运行验证。
-- 更早的层：InvenTree 场景脚本见 T01 证据目录（23 条，16 通过、7 不通过）；并发、PDF、网页界面、Windows 都没有测。
-- GitHub Actions：只有在 PR 创建后才会运行。
+- T03 分支基线（`b620443`）：`python scripts/check_project.py` → PASS（8 项任务、14 项验收定义）。改 tasks.json 后再跑一次 → PASS。这只是文档检查。
+- 应用、数据库并发、Windows 安装、打印测试：还没有，不能说已通过。
 
 ## 下一步（一项）
 
-请业务方回答"路线"和 Q01（服务器放办公室还是云端、断网时是否必须能出货）。路线确认为定制后，D09 改为已采纳，T06 按 deployment.md 第 7 节建立 `application/` 和 PostgreSQL 并发测试工作流。
+建 `prototype/` 的 Django 5.2 骨架和依赖锁文件。
 
 ## 阻塞后续阶段的业务问题
 
