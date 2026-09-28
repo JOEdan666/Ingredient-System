@@ -13,7 +13,7 @@
 | 步骤 | 状态 | 提交 |
 | --- | --- | --- |
 | 1. tasks.json 状态、HANDOFF | 完成 | 见 git log |
-| 2. Django 项目骨架、依赖锁文件 | 未开始 | |
+| 2. Django 项目骨架、依赖锁文件（uv.lock：Django 5.2.17、pytest 9.1.1、pytest-django 4.14.0；Python 3.13.12） | 完成 | 见 git log |
 | 3. 领域模块（D07、I1–I11、operation_id 幂等）+ pytest | 未开始 | |
 | 4. 四个页面 | 未开始 | |
 | 5. docs/prototype.md、截图 | 未开始 | |
@@ -31,7 +31,7 @@
 
 ## 下一步（一项）
 
-建 `prototype/` 的 Django 5.2 骨架和依赖锁文件。
+写领域模块 `prototype/inventory/domain.py`（D07、I1–I11、operation_id 幂等）和 pytest。
 
 ## 阻塞后续阶段的业务问题
 
