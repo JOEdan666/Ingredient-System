@@ -119,3 +119,29 @@ def test_unknown_item_unit_blocks_the_document():
 def test_owner_is_required():
     with pytest.raises(ValueError):
         parse_pdf_order_text(_text(), owner="")
+
+
+def test_unit_word_inside_description_does_not_stand_in_for_unknown_unit():
+    # Codex review of 745f912: the first EA anywhere used to be taken as the unit.
+    text = _text().replace("1.5kg EA SYN CAT SENIOR 1.5KG", "1.5kg BAG SYN CAT EA SENIOR")
+    result = parse_pdf_order_text(text, owner="SYN-OWNER")
+    assert "item_line_unrecognized" in _codes(result.batch_errors)
+    assert not any(line.postable for line in result.lines)
+
+
+def test_page_marker_is_not_absorbed_into_description():
+    text = _text().replace("SYN CAT SENIOR 1.5KG\n", "SYN CAT SENIOR 1.5KG\nPage 1 of 2\n")
+    assert parse_pdf_order_text(text, owner="SYN-OWNER").lines[2].name == "SYN CAT SENIOR 1.5KG"
+
+
+def test_more_than_one_wrapped_line_is_not_trusted():
+    text = _text().replace("Recipe - Cans 5.5oz\n", "Recipe - Cans 5.5oz\nsomething else\n")
+    line = parse_pdf_order_text(text, owner="SYN-OWNER").lines[0]
+    assert "description_unclear" in _codes(line.errors)
+
+
+@pytest.mark.parametrize("old,new", [("3 900201", "4 900201"), ("10 21.00", "11 21.00"), ("10 21.00\n", "")])
+def test_blocked_document_blocks_every_line(old, new):
+    result = parse_pdf_order_text(_text().replace(old, new), owner="SYN-OWNER")
+    assert result.batch_errors
+    assert not any(line.postable for line in result.lines)

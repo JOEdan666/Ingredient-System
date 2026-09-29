@@ -287,9 +287,10 @@
       ],
       "deliverable": "以 fixtures/synthetic/real-format/pdf_order_extracted_text_synthetic.txt 为准，从 pypdf 提取的文字里还原商品行：序号、编码、规格、单位、描述（跨行拼接）、数量、净重、指定效期（1-Jul-27 → 纯 date）、(Old Code …) 旧编码。行顺序被打乱时按序号重排；任何字段拿不准就标为待人工确认，禁止猜测；中文地址/客户信息乱码时不解析，只保留单号、日期、Cust#。只预览不过账。",
       "evidence": [
-        "2026-09-29: 本机 /private/tmp/ingredient-t04b-venv/bin/python -m pytest -q import-spike/tests → 38 passed（新增 test_pdf_order.py 17 条）；scripts/check_project.py → PASS。",
+        "2026-09-29: 本机 /private/tmp/ingredient-t04b-venv/bin/python -m pytest -q import-spike/tests → 44 passed（新增 test_pdf_order.py 23 条）；scripts/check_project.py → PASS。",
         "2026-09-29: 反例：把配对改成反向、或关掉合计核对，分别有 4 条 / 1 条测试失败；还原后 38 passed。",
         "2026-09-29: 经用户此前授权，本机只读核对两份真实 PDF（pypdf 6.19.0 提取）：9 行与 4 行全部识别、序号连续、单号/日期/Cust# 均找到、无批次错误；9 行件装商品全部通过净重与合计核对；4 行里 3 个整箱商品按规则标 unit_needs_confirmation。只输出计数与错误类别，原件和真实值未进入仓库。",
+        "2026-09-29: Codex（gpt-5.6-sol）审查 745f912 提出 3 条：描述里的 EA 顶替未知单位、页码等杂行混入描述、整单被拦时单行仍显示可过账。均本机复现并修复；新增 6 条测试在旧代码上全部失败、修复后通过；两份真实 PDF 结果不变。",
         "未验收：Q02 其它版式、Q04 CS 商品数量栏 EA 的含义、订单过账（T06）。"
       ]
     },

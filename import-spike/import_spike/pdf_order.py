@@ -25,7 +25,10 @@ from .importer import ImportLine, RowError
 _MONTHS = {m: i for i, m in enumerate(
     ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"), start=1)}
 _DATE = re.compile(r"^(\d{1,2})-([A-Za-z]{3})-(\d{2})$")
-_ITEM = re.compile(r"^(\d+) (\d{5,}) (.+?) (EA|CS) (.*)$")
+# SIZE is a few number/abbreviation tokens (1.5kg, 12 x 5.5 oz.); anything
+# else before the unit means the unit column was not where we expect it.
+_SIZE_TOKEN = r"(?:\d+(?:\.\d+)?[A-Za-z]*\.?|x|[A-Za-z]{1,3}\.)"
+_ITEM = re.compile(rf"^(\d+) (\d{{5,}}) ({_SIZE_TOKEN}(?: {_SIZE_TOKEN}){{0,3}}) (EA|CS) (.*)$")
 _ITEM_LIKE = re.compile(r"^\d+ \d{5,} ")
 _QTY = re.compile(r"^(\d+) ([A-Z]{2,4}) (\d+\.\d+)(?: (\S+))?$")
 _TOTALS = re.compile(r"^(\d+) (\d+\.\d+)$")
@@ -37,7 +40,9 @@ _CUST = re.compile(r"Cust#:\s*(\S+)")
 # Lines that end a wrapped description. Address and contact lines are not
 # parsed at all: their Chinese text comes out of pypdf garbled.
 _STOP_PREFIXES = ("Seq ", "Description ", "Delivery", "Attn:", "Cust#", "Messrs.", "INV No.",
-                  "Tel:", "Total :")
+                  "Tel:", "Total :", "Page ")
+# Every observed wrap is a single extra line; more than that is not trusted.
+_MAX_CONTINUATION = 1
 
 
 @dataclass
@@ -147,6 +152,10 @@ def parse_pdf_order_text(text: str, *, owner: str) -> PdfOrderPreview:
         if qty_sum != int(totals.group(1)) or net_sum != Decimal(totals.group(2)):
             batch_errors.append(_block(0, "totals", "totals_mismatch",
                                        f"各行合计 {qty_sum} / {net_sum} 与单据合计不一致"))
+    if batch_errors:
+        # A line is only as trustworthy as the document it was paired in.
+        for line in lines:
+            line.errors.append(_block(line.row_number, "*", "document_blocked", "整单未通过结构核对"))
     return PdfOrderPreview(owner, doc_no, doc_date, cust, lines, batch_errors)
 
 
@@ -155,6 +164,8 @@ def _build_line(info: dict, quantity: tuple[int, re.Match] | None, owner: str,
     row = info["row"]
     item = info["match"]
     errors: list[RowError] = []
+    if len(info["continuation"]) > _MAX_CONTINUATION:
+        errors.append(_block(row, "name", "description_unclear", "描述跨了多行，可能混入其它文字，需人工核对"))
     joined = " ".join([item.group(5), *info["continuation"]]).strip()
     old = _OLD_CODE.search(joined)
     if old:

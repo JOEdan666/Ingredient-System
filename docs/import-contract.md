@@ -190,6 +190,6 @@ Excel 表，PDF 解析留待另行评估）；真实客户文件；生产数据�
 
 - **[已验证，合成样本]** `import_spike/pdf_order.py` 的 `parse_pdf_order_text(text, owner=...)` 读 pypdf 提取出的文字，按序号重排后输出 `ImportLine`：编码（文本）、规格、商品单位、描述（跨行拼接）、旧编码、数量、数量栏单位、净重、指定效期（`1-Jul-27` → 纯 `date`，两位年份按 20YY）。页头只取 INV No.、日期、Cust#；地址、联系人不解析、不保存。货主由调用方传入。模块不依赖 pypdf，调用方负责提取文字。
 - **配对规则 [候选，已用真实文件核对]**：pypdf 从页底往上吐字，数量栏是单独一串。按提取顺序把第 k 个数量行配给第 k 个商品行。两份真实 PDF 上，此规则让可换算的净重全部对上；「取紧挨在上方的数量行」的配法对不上。
-- **拿不准就整单拦下，不猜**：数量行与商品行条数不同（`line_count_mismatch`）、商品行不是倒序（`order_unrecognized`）、序号不是 1..n（`seq_gap`）、各行合计 ≠ 单据合计或缺合计行（`totals_mismatch` / `totals_missing`）、像商品行但单位不是 EA/CS（`item_line_unrecognized`）、缺单号或日期。行级拦截：效期无法确认、`(Old` 写法无法解析、规格是 kg 时净重 ≠ 数量×规格（`net_weight_mismatch`）、商品单位和数量栏单位不同（`unit_needs_confirmation`）。
+- **拿不准就整单拦下，不猜**：数量行与商品行条数不同（`line_count_mismatch`）、商品行不是倒序（`order_unrecognized`）、序号不是 1..n（`seq_gap`）、各行合计 ≠ 单据合计或缺合计行（`totals_mismatch` / `totals_missing`）、像商品行但规格或单位不是已观察的写法（`item_line_unrecognized`，描述里出现 EA 也不会被当成单位）、缺单号或日期；整单被拦时每一行都同时标 `document_blocked`。行级拦截：描述跨了不止一行（`description_unclear`，页码行不会被拼进描述）、效期无法确认、`(Old` 写法无法解析、规格是 kg 时净重 ≠ 数量×规格（`net_weight_mismatch`）、商品单位和数量栏单位不同（`unit_needs_confirmation`）。
 - **[待确认 Q04]** 真实文件里整箱商品（`CS`，如 `12 x 5.5 oz.`）的数量栏印的是 `EA`，是罐数还是箱数不能从单据判断，因此这类行不给基本单位数量，只能人工确认。**[待确认 Q02]** 只观察了一种版式。
-- 本机运行：`/private/tmp/ingredient-t04b-venv/bin/python -m pytest -q import-spike/tests` → 38 passed。只读核对两份真实 PDF（经用户此前授权，仅输出计数与错误类别）：9 行和 4 行全部识别，无批次错误；件装的 9 行全部可过账预览，整箱的 3 行按上条规则拦下。
+- 本机运行：`/private/tmp/ingredient-t04b-venv/bin/python -m pytest -q import-spike/tests` → 44 passed。只读核对两份真实 PDF（经用户此前授权，仅输出计数与错误类别）：9 行和 4 行全部识别，无批次错误；件装的 9 行全部可过账预览，整箱的 3 行按上条规则拦下。
