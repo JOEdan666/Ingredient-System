@@ -57,6 +57,14 @@ run_claude() {
   echo "claude 退出码 $?" >>"$LOG"
 }
 
+# 开跑前先试一次无头浏览器：起不来（例如在 Codex 沙箱里跑）就直接停，不花 token 去得一个 COULD_NOT_VERIFY
+probe="/private/tmp/ingredient-acceptance-probe-$STAMP.png"
+if ! /Users/fangyuan/ai-hub/shared-skills/see-it-run/shot.sh "data:text/html,<p>probe</p>" "$probe" 400x200 >/dev/null 2>&1; then
+  echo "ACCEPTANCE_VERDICT: NONE 无头 Chrome 在当前环境起不来（常见原因：在 Codex 沙箱里运行）。请在普通终端或 Claude Code 里运行本脚本。" | tee -a "$LOG"
+  exit 3
+fi
+rm -f "$probe"
+
 before="$(git -C "$REPO" rev-parse HEAD 2>/dev/null) $(git -C "$REPO" status --porcelain 2>/dev/null | shasum | cut -c1-12)"
 
 case "$MODE" in
