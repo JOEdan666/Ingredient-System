@@ -290,8 +290,8 @@
     {
       "id": "T06a",
       "title": "PostgreSQL 版领域层与真实数据库并发测试（技术部分，不含 Q03/Q04 业务规则）",
-      "status": "ready",
-      "owner": null,
+      "status": "review",
+      "owner": "codex-routine (assigned by user, 2026-09-29)",
       "depends_on": [
         "T03",
         "T05"
@@ -309,7 +309,13 @@
         ".github/workflows/"
       ],
       "deliverable": "按 D09 与 docs/deployment.md 第 7 节，把 prototype/inventory/domain.py 的领域命令移植到 application/（Django 5.2 + PostgreSQL 18），保留 D07/I1–I11/operation_id；在 CI 用 postgres:18.6 服务容器跑 deployment.md 7.3 的并发用例（含「接单时未选货位」、钩子+到达信号、去掉 FOR UPDATE 的反例必须失败）。Q03 显示口径与 Q04 单位/NG 规则保持候选标注，不作为业务结论。",
-      "evidence": []
+      "evidence": [
+        "application/tests/test_domain.py (29 PostgreSQL domain regression cases)",
+        "application/tests/test_concurrency.py (13 marked PostgreSQL concurrency/failure cases; 13 passed locally on PostgreSQL 14.22)",
+        "application/check_concurrency_junit.py (13 executed, 0 failed on local run)",
+        ".github/workflows/db-tests.yml (PostgreSQL 18.6 target; Actions runs 36575919504 and 36576125734 succeeded; draft PR #12)",
+        "docs/test-commands.md (exact setup, versions, commands, results, limitations)"
+      ]
     }
   ]
 }
