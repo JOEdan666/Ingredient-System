@@ -18,6 +18,7 @@ def test_stock_export_keeps_rows_and_parses_ng_and_slash_date():
     assert lines[2].condition == "HOLD" and lines[2].location is None
     assert lines[6].code == "009104"
     assert all(line.postable for line in lines)
+    assert lines[0].condition == "AVAILABLE"
 
 
 def test_inspection_unfilled_fields_are_none_and_datetime_is_date():

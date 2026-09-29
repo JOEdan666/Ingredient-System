@@ -101,11 +101,11 @@ def parse_stock_export(path: Path, *, owner: str, external_doc_no: str) -> list[
             if not isinstance(warehouse, str) or not warehouse.strip():
                 errors.append(_error(row, "warehouse", "warehouse_missing", "仓库名称不能为空"))
                 warehouse = None
-            condition = "HOLD" if warehouse and warehouse.endswith(" NG") else "SELLABLE"
+            condition = "HOLD" if warehouse and warehouse.endswith(" NG") else "AVAILABLE"
             location = raw[STOCK_HEADERS[4]]
             if not _blank(location) and not isinstance(location, str):
                 errors.append(_error(row, "location", "location_invalid", "仓位必须是文本"))
-            if condition == "SELLABLE" and _blank(location):
+            if condition == "AVAILABLE" and _blank(location):
                 errors.append(_error(row, "location", "location_missing", "正常库存缺少仓位，需人工核对"))
             lines.append(ImportLine(
                 row_number=row, owner=owner, external_doc_no=external_doc_no, doc_version=None,
