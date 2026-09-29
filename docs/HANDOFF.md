@@ -1,62 +1,23 @@
 # 当前交接
 
-更新：2026-09-29（Claude Code 定时开发例程，T09 已推到 review，等待人工/审查者合并）。
+更新：2026-09-29（Codex 定时开发，T06a）。
 
 ## 当前状态
 
-- `main` = `0064a62`：启动包、T02、T01、T05、T03、T04、状态同步、plan-real-formats 已按
-  #2 → #3 → #4 → #1 → #5 → #6 → #7 → #8 → #9 顺序合并。
-- tasks.json：T01–T05 → done；T06/T07/T08 仍 `blocked`（Q03/Q04/Q01/Q05 未回答）；
-  T09 本轮改为 `review`（见下）；T04b `ready`、T04c `queued`、T06a `ready` 待后续例程按顺序开工。
-- 本轮例程（分支 `agent/claude/T09-ci-pytest`，基准 `main`=`0064a62`）：
-  - 第 0 步：`git branch -r --no-merged origin/main` 一开始因 fetch 时序短暂显示
-    `agent/claude/status-sync-2026-09-29` 未合并，重新 fetch 后确认该分支其实已通过
-    PR #8 合并进 main（`git merge-base --is-ancestor` 验证），不是遗留分支，按空分支处理进入第 1 步。
-  - 第 1 步：未发现 `review` 状态任务需要补记合并状态；按 tasks.json 顺序挑到 T09
-    （合并前自动测试：GitHub Actions 跑 prototype 与 import-spike 的 pytest），
-    depends_on T03/T04 均已 done，blocked_by 为空。
-  - 第 2/3 步：新增 `.github/workflows/pytest.yml`（不改 `project-checks.yml`）：两个
-    `ubuntu-24.04` job（`prototype`、`import-spike`），`actions/checkout` + `astral-sh/setup-uv`
-    均按 commit SHA 固定（用 `git ls-remote --tags` 于 2026-09-29 解析：
-    `actions/checkout` = v4 = `11d5960a326750d5838078e36cf38b85af677262`；
-    `astral-sh/setup-uv` = v9.0.0 = `c771a70e6277c0a99b617c7a806ffedaca235ff9`，
-    uv 版本固定 `0.12.20`，来自 PyPI `uv` 包 2026-09-29 的 latest），
-    各自 `uv run --frozen pytest -ra`。新增 `docs/test-commands.md` 记录本地/CI 命令与实际输出。
-  - 第 4 步：`python scripts/check_project.py` PASS；`git diff --check origin/main...HEAD` 无输出；
-    `prototype/` 与 `import-spike/` 的 `uv run --frozen pytest -ra` 均全部通过（见下）；
-    T09 标记 `review`，evidence 见 tasks.json。
+- 远端 `main` 基准 `9fca774`，T09 已通过 PR #10 合并；T04b 在独立分支 `agent/codex/T04b-real-format-import`，开放 draft PR #11。T04c 依赖 T04b，仍未开工。
+- 本轮只接 T06a；分支 `agent/codex/T06a-postgres-domain`，基准 `9fca774`。`application/` 移植 T03 的领域模型、命令、迁移与合成数据回归用例，连接 PostgreSQL，不含网页和生产部署。新增锁探针、缺锁反例、13 条 PostgreSQL 并发/失败检查及独立 CI 工作流；见 [test-commands.md](test-commands.md)。
+- T06a 当前为 `review`，等 PR 的 PostgreSQL 18 CI 和独立复审；T06/T07/T08 仍因业务问题阻塞。所有库存规则只按 D07/D09 候选设计测试，不代表客户验收。
 
-## 可运行检查（本轮实际运行，2026-09-29，Linux 云容器）
+## 本轮实测与限制
 
-```
-$ python scripts/check_project.py
-PASS: 12 tasks, 14 acceptance definitions, synthetic fixture and local links
-
-$ git diff --check origin/main...HEAD
-(无输出)
-
-$ cd prototype && uv run --frozen pytest -ra
-============================== 42 passed in 2.11s ==============================
-
-$ cd import-spike && uv run --frozen pytest -ra
-============================== 14 passed in 0.16s ==============================
-
-$ cd import-spike && uv run --frozen pytest -ra /tmp/empty_test_dir   # 验证 0 条测试时的退出码
-collected 0 items / no tests ran / exit code 5
-```
-
-未运行验证：新工作流在真实 GitHub Actions 上的执行结果（含 `astral-sh/setup-uv` 实际下载、
-uv 0.12.20 在 Actions runner 上的行为）——本地只验证了 pytest 本身的退出码语义，不是 Actions 环境；
-PR 提交后由 Actions 的 checks 标签给出真实结果。
+- `python3 scripts/check_project.py`：`PASS: 12 tasks, 14 acceptance definitions, synthetic fixture and local links`。
+- 本机 PostgreSQL 14.22 临时测试库：`application/` 的 `uv run --frozen pytest -ra` 为 **43 passed**；并发子集 **13 passed, 30 deselected**；计数脚本 `executed=13, expected>=13, failed=0`。这是本机数据库调试，不是目标 PostgreSQL 18 的测试结论。
+- 目标 18.6 由 `.github/workflows/db-tests.yml` 在 PR 上运行；实际结果待检查。Windows 安装/升级、真实客户数据、真实业务验收均未执行。
+- 详细命令、版本、并发钩子与限制见 [test-commands.md](test-commands.md)。
 
 ## 下一步（一项）
 
-T09 的 draft PR 等待审查（Claude 审查者或人工）；本例程不合并任何 PR。下一次例程接手时：
-先重复第 0 步检查 `agent/claude/T09-ci-pytest` 对应的 open PR 是否有
-`REVIEW_VERDICT: CHANGES_REQUESTED` 需要按意见修改，或已合并需要在第 1 步把 T09 记为 `done`；
-若已处理完 T09，再按 tasks.json 顺序挑下一个：T04b（真实格式库存表/验货纸导入）或 T06a
-（PostgreSQL 领域层与并发测试），二者当前都满足开工条件（depends_on 已 done、blocked_by 为空）。
-T06/T07/T08 仍需业务方回答 PROJECT.md「关键未决项」表中的 Q01/Q03/Q04/Q05 之一才能解除阻塞。
+检查 T06a draft PR 的 PostgreSQL 18 CI；若失败，修复并重跑；若通过，请独立审查最终 commit SHA，保留 draft 等人工集成。不要在本例程合并 PR。
 
 ## 阻塞后续阶段的业务问题
 

@@ -1,15 +1,16 @@
 # 测试命令
 
-更新：2026-09-29（T09）。记录本地与 CI 实际运行的命令，不是应用验收标准（见 docs/acceptance.json）。
+更新：2026-09-29（T06a）。记录本地与 CI 实际运行的命令，不是客户业务验收（见 docs/acceptance.json）。
 
 ## 范围
 
-当前只有两个 Python 子项目各自带 `pyproject.toml` + `uv.lock`：
+三个 Python 子项目各自带 `pyproject.toml` + `uv.lock`：
 
 - `prototype/`：T03 四屏流程原型（Django 5.2，模拟持久化，不证明并发/锁）。
 - `import-spike/`：T04 固定格式导入解析 spike（不过账，不连数据库）。
+- `application/`：T06a Django 5.2.17 + psycopg 3 + PostgreSQL 的领域命令和数据库测试；只含领域层，无部署或界面。
 
-`application/`（T06/T06a 的真实数据库实现）尚未建立；届时在本文件补充 PostgreSQL 服务容器和并发测试命令，见 DECISIONS.md D09 与 docs/deployment.md 第 7 节。
+Q03 展示口径与 Q04 单位/NG 规则仍属候选，不能据此声称客户验收通过。
 
 ## 本地运行
 
@@ -18,6 +19,11 @@
 ```bash
 cd prototype && uv run --frozen pytest -ra
 cd import-spike && uv run --frozen pytest -ra
+# 先启动 PostgreSQL，创建 ingredient_test 数据库，赋予测试用户 CREATEDB 权限。
+# 用 PGHOST、PGPORT、PGUSER、PGPASSWORD、PGDATABASE 指向这台测试库。
+cd application && uv run --frozen pytest -ra
+cd application && uv run --frozen pytest -m concurrency --junitxml=concurrency.xml -ra
+cd application && uv run --frozen python check_concurrency_junit.py concurrency.xml
 ```
 
 实际运行（2026-09-29，Linux 云容器，Python 3.13.12）：
@@ -41,3 +47,20 @@ $ cd import-spike && uv run --frozen pytest -ra
 - `postgres:` 服务容器留给 T06a（本文件届时补充连接串、迁移和并发测试命令）。
 
 CI 是否真的通过：本次改动未在 GitHub Actions 上实际运行（**未运行验证**，PR 提交后由 Actions 自动跑，结果见 PR 的 checks 标签）。本地 `uv run --frozen pytest` 的结果如上，用来确认锁文件和测试本身在改动前是绿的。
+
+## T06a PostgreSQL 领域层
+
+`.github/workflows/db-tests.yml` 独立起 `postgres:18.6` 服务容器，先跑全部测试，再单独跑标记为 `concurrency` 的 13 条测试并读取 JUnit 结果；少于 13 条或有失败时退出非零。CI 设置 `REQUIRE_PG18=1`，数据库版本测试必须读到 18.x。镜像版本依据 [PostgreSQL 官方 18.6 发布记录](https://www.postgresql.org/about/news/postgresql-186-1711-1615-1519-1424-and-19-beta-3-released-3365/)，2026-09-29 查阅。
+
+本机调试使用临时 PostgreSQL **14.22**（不是目标版本）、Python 3.13.5、uv 0.12.20、Django 5.2.17。测试库位于 `/private/tmp/ingredient-pg14`，连接端口 55432；测试数据全是合成值。实测：
+
+```
+$ cd application && uv run --frozen pytest -ra
+43 passed in 4.61s
+$ cd application && uv run --frozen pytest -m concurrency --junitxml=/private/tmp/ingredient-concurrency.xml -ra
+13 passed, 30 deselected in 2.00s
+$ cd application && uv run --frozen python check_concurrency_junit.py /private/tmp/ingredient-concurrency.xml
+concurrency: executed=13, expected>=13, failed=0
+```
+
+前三个 race 参数重复 3 次；其余并发用例各运行一次。钩子停住事务 A 后，测试确认 B 到达加锁点，查 `pg_stat_activity.wait_event_type='Lock'`，再放行 A；未加 `FOR UPDATE` 的专用反例用例能检测到 B 在 A 提交前读到旧量。版本 18 的实际结果以 PR 的 GitHub Actions 记录为准；本机 14 的通过不能替代它。
