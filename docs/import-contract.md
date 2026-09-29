@@ -185,3 +185,11 @@ Excel 表，PDF 解析留待另行评估）；真实客户文件；生产数据�
 - 验货纸跳过标题、双层表头与仅有汇总字段的末行；保留空的实收/多收/少收为 `None`。该表的“存倉數量 (件)”与“收貨數量 件”已经标成件，不能因 `Item UOM=CS` 再乘箱规；显式标成 CS 的数量可用 `convert_to_ea` 按 `Piece Per Case` 换算。此区分仍需业务方确认后才能用于实际过账。
 - T04 旧解析器同时修正预览后台账变化的重复判定、布尔数量、备注负数及等号写法、已确认单位换算整数校验、`datetime` 转纯日期、混合单据版本拦截。它仍然只是内存台账，不代表 A05 数据库验收通过。
 - 本机运行：`/private/tmp/ingredient-t04b-venv/bin/python -m pytest -q import-spike/tests` → 21 passed；`python3 scripts/check_project.py` → PASS。获准读取的两份本地真实 Excel 仅输出行数与错误类别：库存 478 行、验货纸 50 行，均无行级错误；没有在仓库或日志打印客户值。真实文件验证了这两个已观察版式，不证明其它版本或业务口径。
+
+## 10. T04c PDF 送货/装箱单商品行（本地验证，未过账）
+
+- **[已验证，合成样本]** `import_spike/pdf_order.py` 的 `parse_pdf_order_text(text, owner=...)` 读 pypdf 提取出的文字，按序号重排后输出 `ImportLine`：编码（文本）、规格、商品单位、描述（跨行拼接）、旧编码、数量、数量栏单位、净重、指定效期（`1-Jul-27` → 纯 `date`，两位年份按 20YY）。页头只取 INV No.、日期、Cust#；地址、联系人不解析、不保存。货主由调用方传入。模块不依赖 pypdf，调用方负责提取文字。
+- **配对规则 [候选，已用真实文件核对]**：pypdf 从页底往上吐字，数量栏是单独一串。按提取顺序把第 k 个数量行配给第 k 个商品行。两份真实 PDF 上，此规则让可换算的净重全部对上；「取紧挨在上方的数量行」的配法对不上。
+- **拿不准就整单拦下，不猜**：数量行与商品行条数不同（`line_count_mismatch`）、商品行不是倒序（`order_unrecognized`）、序号不是 1..n（`seq_gap`）、各行合计 ≠ 单据合计或缺合计行（`totals_mismatch` / `totals_missing`）、像商品行但规格或单位不是已观察的写法（`item_line_unrecognized`，描述里出现 EA 也不会被当成单位）、缺单号或日期；整单被拦时每一行都同时标 `document_blocked`。行级拦截：描述跨了不止一行（`description_unclear`，页码行不会被拼进描述）、效期无法确认、`(Old` 写法无法解析、规格是 kg 时净重 ≠ 数量×规格（`net_weight_mismatch`）、商品单位和数量栏单位不同（`unit_needs_confirmation`）。
+- **[待确认 Q04]** 真实文件里整箱商品（`CS`，如 `12 x 5.5 oz.`）的数量栏印的是 `EA`，是罐数还是箱数不能从单据判断，因此这类行不给基本单位数量，只能人工确认。**[待确认 Q02]** 只观察了一种版式。
+- 本机运行：`/private/tmp/ingredient-t04b-venv/bin/python -m pytest -q import-spike/tests` → 44 passed。只读核对两份真实 PDF（经用户此前授权，仅输出计数与错误类别）：9 行和 4 行全部识别，无批次错误；件装的 9 行全部可过账预览，整箱的 3 行按上条规则拦下。
