@@ -244,7 +244,7 @@
     {
       "id": "T04b",
       "title": "按真实格式导入：客户库存导出表与验货纸（合成样本）",
-      "status": "review",
+      "status": "done",
       "owner": "codex-local",
       "depends_on": [
         "T04"
@@ -263,14 +263,15 @@
       "evidence": [
         "2026-09-29: 本机 import-spike/ uv run --frozen pytest -q → 21 passed；scripts/check_project.py → PASS。",
         "2026-09-29: 获准只读核对真实 Excel，库存 478 行、验货纸 50 行；行级错误均为 0。仅输出数量与错误类别，原件及真实值未进入仓库。",
-        "未验收：A05 数据库事务/并发、Q04 单位与 NG 业务解释、其它版式及正式过账。"
+        "未验收：A05 数据库事务/并发、Q04 单位与 NG 业务解释、其它版式及正式过账。",
+        "2026-09-29: PR #11 由用户合并进 main（合并提交 0a5be88）。集成完成；A05 数据库事务/并发与 Q04 业务解释仍未验收，见上一条。"
       ]
     },
     {
       "id": "T04c",
       "title": "PDF 送货/装箱单：商品行提取（合成文本样本）",
-      "status": "queued",
-      "owner": null,
+      "status": "review",
+      "owner": "claude-local (handed off from codex-local, 2026-09-29)",
       "depends_on": [
         "T04b"
       ],
@@ -285,7 +286,12 @@
         "docs/import-contract.md"
       ],
       "deliverable": "以 fixtures/synthetic/real-format/pdf_order_extracted_text_synthetic.txt 为准，从 pypdf 提取的文字里还原商品行：序号、编码、规格、单位、描述（跨行拼接）、数量、净重、指定效期（1-Jul-27 → 纯 date）、(Old Code …) 旧编码。行顺序被打乱时按序号重排；任何字段拿不准就标为待人工确认，禁止猜测；中文地址/客户信息乱码时不解析，只保留单号、日期、Cust#。只预览不过账。",
-      "evidence": []
+      "evidence": [
+        "2026-09-29: 本机 /private/tmp/ingredient-t04b-venv/bin/python -m pytest -q import-spike/tests → 38 passed（新增 test_pdf_order.py 17 条）；scripts/check_project.py → PASS。",
+        "2026-09-29: 反例：把配对改成反向、或关掉合计核对，分别有 4 条 / 1 条测试失败；还原后 38 passed。",
+        "2026-09-29: 经用户此前授权，本机只读核对两份真实 PDF（pypdf 6.19.0 提取）：9 行与 4 行全部识别、序号连续、单号/日期/Cust# 均找到、无批次错误；9 行件装商品全部通过净重与合计核对；4 行里 3 个整箱商品按规则标 unit_needs_confirmation。只输出计数与错误类别，原件和真实值未进入仓库。",
+        "未验收：Q02 其它版式、Q04 CS 商品数量栏 EA 的含义、订单过账（T06）。"
+      ]
     },
     {
       "id": "T06a",

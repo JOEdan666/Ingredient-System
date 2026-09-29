@@ -9,10 +9,9 @@ Total :
 4 EA 12.00 12-Nov-27
 2 900202 1.5kg EA SYN CAT RENAL 1.5KG  (Old
 Code 900299)
-2 CS 9.00 11-Sep-28
+Description Quantity (EA/Pack) Net Weight Expiry Date
 1 9270501 12 x 5.5 oz. CS SYN Cat Cans Turkey
 Recipe - Cans 5.5oz
-Description Quantity (EA/Pack) Net Weight Expiry Date
 Delivery <中文地址：真实文件里这一行提取出来是乱码>
 Seq NV P/N SIZE of Mea
 Attn: SYN Contact Fax:

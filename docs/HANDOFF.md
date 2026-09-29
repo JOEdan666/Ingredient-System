@@ -1,5 +1,13 @@
 # 当前交接
 
+## 2026-09-29 Claude Code 本机：T04c PDF 送货单商品行
+
+- Task/owner/branch：T04c，owner `claude-local`（Codex 本机会话额度用完后交接）；分支 `agent/claude/T04c-pdf-order-lines`，基准 `main` `0a5be88`（PR #11 已合并，T04b 同步标 `done`）。开工期间占住本机 Codex 定时任务的锁文件，避免同一任务被两边同时写。
+- 改动：新增 `import-spike/import_spike/pdf_order.py` 与 17 条测试；按两份真实 PDF 的结构修正合成样本（旧样本多一行数量、序号 1 的位置不对）；契约见 [import-contract.md](import-contract.md) 第 10 节。
+- 实测：`/private/tmp/ingredient-t04b-venv/bin/python -m pytest -q import-spike/tests` → 38 passed；`python3 scripts/check_project.py` → PASS；反例改坏配对/合计核对各自有测试失败。真实 PDF 只读核对只输出计数与错误类别。
+- 未验收：Q04（整箱商品数量栏印 EA 的含义）、Q02 其它版式、过账（T06）。
+- 下一动作：独立审查最终提交后推送分支并开 draft PR。
+
 ## 2026-09-29 Claude 定时例程：T04b 按审查意见修复
 
 - Task/owner/branch：T04b，owner `claude-routine`；分支 `agent/codex/T04b-real-format-import`（继续沿用原分支，未新建）；基准提交 `e1dccf2`（PR #11 head，审查时一致）。
