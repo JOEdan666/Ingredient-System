@@ -1,41 +1,46 @@
 # 当前交接
 
-更新：2026-09-28（Claude Code 云端会话，T03 进行中）。
+更新：2026-09-29（Claude Code 定时开发例程，T04 进行中）。
 
 ## 当前状态
 
-- `main` = `b620443`：启动包、T02、T01、T05 已按 #2 → #3 → #4 → #1 顺序合并。
-- **T03 进行中**：分支 `agent/claude/T03-prototype`，基于 `main` `b620443`，owner `claude-cloud`，只有这个会话写入。草稿 PR [#6](https://github.com/JOEdan666/Ingredient-System/pull/6) 指向 `main`，未合并。
-- tasks.json（本分支第一个提交）：T01、T02 → done（已合并，evidence 未改）；T05 → review（owner `claude-cloud`，evidence 为 D09 和 deployment.md）；T03 → in_progress。T05 合并后的最终 SHA 仍待 Codex 复审（见下方审查记录）。
+- `main` = `5be897f`：启动包、T02、T01、T05、T03 已按 #2 → #3 → #4 → #1 → #5 → #6 顺序合并。
+- tasks.json：T01、T02、T03、T05 → done（T03/T05 的 PR 均已合并，evidence 里补了合并记录）；
+  T06/T07/T08 仍 `blocked`（各自的 Q03/Q04/Q01/Q05 未回答）。
+- **T04 → review**：分支 `agent/claude/T04-import-spike`，基于 `main` `5be897f`，owner
+  `claude-routine`，只有本次例程会话写入。deliverable 是 `import-spike/`（固定模板解析 +
+  行级校验 + 预览 + 重复/修订单识别的 spike，纯 Python，不接 `prototype/` 的 Django 层）、
+  `fixtures/synthetic/`（新增 `import-samples/*.xlsx`、`unit-conversions.json`、
+  `import-ledger.json`，均标 `synthetic: true`）、`docs/import-contract.md`。draft PR 待建，
+  见下方"下一步"。
 
-## T03 进度（每一步提交后更新）
+## T04 进度（每一步提交后更新）
 
 | 步骤 | 状态 |
 | --- | --- |
-| 1. tasks.json 状态、HANDOFF | 完成 |
-| 2. Django 5.2 骨架、依赖锁文件 `prototype/uv.lock`（Python 3.13.12、Django 5.2.17、pytest 9.1.1、pytest-django 4.14.0） | 完成 |
-| 3. 领域模块 `prototype/inventory/domain.py`（D07、I1–I11、operation_id 幂等、对账 `check_invariants`）+ 合成数据加载 | 完成 |
-| 4. 四个页面（库存、收货、出库+订单处理、历史查询）+ 页面流程测试 | 完成 |
-| 5. [prototype.md](prototype.md)、截图 `docs/screenshots/t03-*.png`（4 张，合成数据） | 完成 |
-| 6. 草稿 PR [JOEdan666/Ingredient-System#6](https://github.com/JOEdan666/Ingredient-System/pull/6) 指向 main；内容提交 `0a5899d`，最终 SHA 以 PR 页面为准 | 完成 |
+| 1. tasks.json 状态（T03/T05→done 补合并证据，T04→in_progress）、HANDOFF | 完成 |
+| 2. `import-spike/`：uv 项目骨架 + 依赖锁文件（Python 3.13.12、openpyxl 3.1.5、pytest 9.1.1） | 完成 |
+| 3. `import_spike/importer.py`：解析、行级校验（编码/单位/日期/备注覆盖/文件内疑似重复行）、纯函数 `preview()`、`classify_batch()`、`commit_batch()` | 完成 |
+| 4. 合成 `.xlsx` 样本（`fixtures/synthetic/import-samples/generate_samples.py` 生成）+ 单位换算配置 + 合成台账 | 完成 |
+| 5. `import-spike/tests/test_importer.py`：14 条 pytest，覆盖 A05/A07/A08 | 完成 |
+| 6. `docs/import-contract.md` | 完成 |
+| 7. 状态改 review、补 evidence | 完成 |
+| 8. 开 draft PR | 本轮进行中，见 PR 链接（若已建） |
 
-## 审查记录（仍有效的部分）
+## 可运行检查（T04 分支）
 
-- T03：尚未审查。
-- T05：Codex 审查 `e3974b0` 的 4 条已修正；复审 `426a47f` 的问题在 T02 `1d3b4f9` 和 T05 `c30e537` 修正。修正后的最终 SHA 待重新审查。
-- T01：Codex 审查 `47d6b96` 确认的 3 条在 `22b1403` 修正；修正后未重新审查。
-
-## 可运行检查（T03 分支）
-
-- `python scripts/check_project.py`：基线和每次提交前都是 PASS（8 项任务、14 项验收定义）。只检查文档和任务格式。
-- `cd prototype && uv run pytest`：36 passed（SQLite）。完整输出在 [prototype.md](prototype.md) 第 6 节。临时变异抽查（未提交）：两个变异分别让 4+3、3+1 条测试失败/出错，说明测试能分辨对错。
-- `uv run python manage.py check`：无问题；`makemigrations --check`：无遗漏。
-- **未运行验证**：PostgreSQL 与并发（A06）、Windows 上运行、除无头 Chromium 外的浏览器、登录权限（A14）、PDF/Excel 导入、打印。SQLite 上 `select_for_update()` 不生效，原型**不证明并发和锁**。
-- acceptance.json 各项状态没有改（stage 为 database/end_to_end，SQLite 原型不满足）。
+- `python scripts/check_project.py`（仓库根目录）：PASS（8 项任务、14 项验收定义）。只检查文档和任务格式。
+- `cd import-spike && uv sync && uv run python ../fixtures/synthetic/import-samples/generate_samples.py && uv run pytest -v`：**14 passed**。完整输出见 [import-contract.md](import-contract.md) 第 6 节。
+- 临时变异抽查（未提交）：注释掉"编码存成数字"检查后 1 条测试失败（`test_code_stored_as_number_is_blocked_not_silently_cast`），还原后 14 条全部通过，说明测试能分辨对错。
+- **未运行验证**：真实客户文件、PDF 订单解析（Q02，本任务只做到货/验货 Excel）、生产数据库、
+  与 T06 `PostImport` 的集成、权限。这些都标在 import-contract.md 里，没有谎称已验证。
 
 ## 下一步（一项）
 
-请业务方看四张截图，回答 Q03：员工口中的「库存」指实物、合格实物还是可用（[prototype.md](prototype.md) 第 8 节第 1 条）。
+T04 已改为 `review` 并推送；等待 reviewer（Claude 审查者定时任务或人工）在 draft PR 上给结论。
+下一次例程接手时先看 PR 是否已合并（合并了就把 T04 标为 done），再挑下一个未阻塞任务——
+目前 T06/T07/T08 都被业务问题挡住，届时可能要停在 `NOTHING_TO_DO`，直到 Q01/Q03/Q04/Q05
+或"路线"任一问题有答复。
 
 ## 阻塞后续阶段的业务问题
 
@@ -56,13 +61,10 @@
 
 后续把当前状态改为最新摘要，旧状态由 Git 历史保存。详细运行证据放在对应 PR 或合成测试报告中，避免无限增长。
 
-## 审查与修正（2026-09-28 夜，本机 Claude Code 接手本分支）
+## 历史记录（已合并任务的审查细节见 Git 历史与对应 PR）
 
-- **写入者交接**：云端会话建完 PR #6 后已结束；本机 Claude Code 接手 `agent/claude/T03-prototype` 做这一轮修正，云端会话不再写本分支。
-- 审查来源：Claude 审查者定时任务（PR #6 评论，`CHANGES_REQUESTED @ 1fe6af5`）与 Codex（本机）。逐条核实后：
-  - 已修：移位 / 改状态分两步锁来源和目标 → 改为一次按 id 顺序锁两行（避免 PostgreSQL 上 A→B / B→A 死锁）；改状态加锁后校验状态未变（保险，状态是余额行身份的一部分，本不会变）。
-  - 已修：分配 / 取消页面未校验订单行属于 URL 中的订单 → 不属于即拒绝；表单里非数字的库存/分配编号 → 友好拒绝，不再 500。
-  - 已修：T03 状态改为 review，补 evidence。
-  - 不成立：「两个并发的待检→合格会重复加可售」——第二个请求在锁内重读可改数量为 0 会被拒绝（domain.py 的 insufficient_free 检查）。
-- 新增 6 条回归测试；用修正前的代码跑这 6 条全部失败，修正后全部通过。本机 `pytest`：42 passed（SQLite，不证明并发）。
-- **需要用户知道**：PR #5（本分支第一个提交：任务状态与 HANDOFF）在建立后 10 秒被合并进 main（合并人显示为用户账号）。按时间判断是云端会话所为，违反了「不要合并」。内容只含状态与交接文字，已保留，未回滚。
+- T01（PR #4）、T02（PR #3）、T05（PR #1）、T03（PR #6）均已合并进 `main`；各自的审查往返、
+  修正提交和最终 SHA 见对应 PR 页面，不在此重复。
+- **供参考**：T03 分支曾出现 PR #5、PR #6 在建立后很快被合并（合并人显示为用户账号，具体是否
+  为人工操作还是某次会话所为已无法在本轮确认）。两次合并的内容都只是既定的状态/文档变更，
+  未发现被篡改的证据，未做回滚。按本轮指令，例程本身在任何情况下都不合并 PR。

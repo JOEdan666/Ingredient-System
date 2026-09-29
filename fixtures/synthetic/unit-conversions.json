@@ -1,0 +1,15 @@
+{
+  "synthetic": true,
+  "description": "T04 import-spike 合成单位换算配置：EA 是免换算的基本单位；只有下面显式列出的 (owner, code, unit) 视为已确认换算，其余单位一律拒绝自动过账。",
+  "base_units": { "EA": true },
+  "confirmed": [
+    {
+      "owner": "DEMO-OWNER-A",
+      "code": "00500",
+      "unit": "CS",
+      "factor_to_base": 24,
+      "confirmed_by": "SYN-QA",
+      "confirmed_at": "2026-09-01"
+    }
+  ]
+}
