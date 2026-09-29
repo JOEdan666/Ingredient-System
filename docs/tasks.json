@@ -216,8 +216,8 @@
     {
       "id": "T09",
       "title": "合并前自动测试：GitHub Actions 跑 prototype 与 import-spike 的 pytest",
-      "status": "ready",
-      "owner": null,
+      "status": "in_progress",
+      "owner": "claude-routine",
       "depends_on": [
         "T03",
         "T04"
