@@ -50,7 +50,7 @@ CI 是否真的通过：本次改动未在 GitHub Actions 上实际运行（**�
 
 ## T06a PostgreSQL 领域层
 
-`.github/workflows/db-tests.yml` 独立起 `postgres:18.6` 服务容器，先跑全部测试，再单独跑标记为 `concurrency` 的 13 条测试并读取 JUnit 结果；少于 13 条或有失败时退出非零。CI 设置 `REQUIRE_PG18=1`，数据库版本测试必须读到 18.x。镜像版本依据 [PostgreSQL 官方 18.6 发布记录](https://www.postgresql.org/about/news/postgresql-186-1711-1615-1519-1424-and-19-beta-3-released-3365/)，2026-09-29 查阅。
+`.github/workflows/db-tests.yml` 在本任务分支 push、PR 和 main push 时独立起 `postgres:18.6` 服务容器，先跑全部测试，再单独跑标记为 `concurrency` 的 13 条测试并读取 JUnit 结果；少于 13 条或有失败时退出非零。CI 设置 `REQUIRE_PG18=1`，数据库版本测试必须读到 18.x。镜像版本依据 [PostgreSQL 官方 18.6 发布记录](https://www.postgresql.org/about/news/postgresql-186-1711-1615-1519-1424-and-19-beta-3-released-3365/)，2026-09-29 查阅。
 
 本机调试使用临时 PostgreSQL **14.22**（不是目标版本）、Python 3.13.5、uv 0.12.20、Django 5.2.17。测试库位于 `/private/tmp/ingredient-pg14`，连接端口 55432；测试数据全是合成值。实测：
 
@@ -63,4 +63,4 @@ $ cd application && uv run --frozen python check_concurrency_junit.py /private/t
 concurrency: executed=13, expected>=13, failed=0
 ```
 
-前三个 race 参数重复 3 次；其余并发用例各运行一次。钩子停住事务 A 后，测试确认 B 到达加锁点，查 `pg_stat_activity.wait_event_type='Lock'`，再放行 A；未加 `FOR UPDATE` 的专用反例用例能检测到 B 在 A 提交前读到旧量。版本 18 的实际结果以 PR 的 GitHub Actions 记录为准；本机 14 的通过不能替代它。
+未分配订单竞态参数重复 3 次；其余并发用例各运行一次。钩子停住事务 A 后，测试确认 B 到达加锁点，查 `pg_stat_activity.wait_event_type='Lock'`，再放行 A；未加 `FOR UPDATE` 的专用反例用例能检测到 B 在 A 提交前读到旧量。版本 18 的实际结果以分支 GitHub Actions 记录为准；本机 14 的通过不能替代它。

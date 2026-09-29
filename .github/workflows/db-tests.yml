@@ -3,7 +3,7 @@ name: PostgreSQL domain tests
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, agent/codex/T06a-postgres-domain]
   workflow_dispatch:
 
 permissions:
