@@ -1,0 +1,13 @@
+# 真实格式的合成样本
+
+结构照 2026-09-29 用户提供的真实文件（放在仓库外，**从不提交**）复制；所有值都是编造的。
+
+| 文件 | 对应的真实文件 | 必须处理的坑 |
+| --- | --- | --- |
+| `stock_export_synthetic.xlsx`（`generate.py` 生成） | 客户系统库存导出 | 效期是文字 `2027/3/31`（不补零）；NG 货靠仓库名后缀 ` NG` 表示且仓位为空；同一编码多行（不同效期/仓/仓位）；没有货主列；编码是文字，可能有前导零 |
+| `inspection_sheet_synthetic.xlsx`（`generate.py` 生成） | 验货纸 | 前 3 行是标题；表头占两行（第 4、5 行）；编号是数字单元格；单位 CS/EA 并给每箱件数；效期是 datetime；实收/多收/少收/破包/效期/封口栏空着待人工填；有一个空的第二张表 |
+| `pdf_order_extracted_text_synthetic.txt` | PDF 送货/装箱单（pypdf 提取出的文字） | 行顺序被打乱（数量行在商品行上方）；描述会断行；有 `(Old Code …)`；每行有**指定效期**；单位 EA/CS 与 `12 x 5.5 oz.` 包装；中文地址提取为乱码，不能自动识别；日期是 `1-Jul-27`；真实提取结果在断行处带行尾空格（样本已去掉以通过 `git diff --check`，解析器必须先 strip） |
+
+板头纸（Word）字段：收貨客戶、送貨地址、送貨時間、訂單編號（一板可含多张单，`A & B`）、`共N板 (i/N)`。
+
+生成：`cd import-spike && uv run python ../fixtures/synthetic/real-format/generate.py`

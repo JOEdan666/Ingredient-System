@@ -212,6 +212,92 @@
       ],
       "deliverable": "先导入客户账后盘点的试运行；明确快照是否已扣未出货订单，避免双扣；切换对账、支持安排，真实数据不入库",
       "evidence": []
+    },
+    {
+      "id": "T09",
+      "title": "合并前自动测试：GitHub Actions 跑 prototype 与 import-spike 的 pytest",
+      "status": "ready",
+      "owner": null,
+      "depends_on": [
+        "T03",
+        "T04"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A06"
+      ],
+      "scope": [
+        ".github/workflows/",
+        "docs/test-commands.md"
+      ],
+      "deliverable": "新增工作流（不改现有 project-checks.yml 的行为）：ubuntu-24.04 上用 uv 按锁文件安装并运行 prototype/ 和 import-spike/ 的 pytest；收集到 0 条测试时失败；actions 用 commit SHA 固定版本；docs/test-commands.md 写明本地与 CI 的命令。PostgreSQL 服务容器留给 T06a。",
+      "evidence": []
+    },
+    {
+      "id": "T04b",
+      "title": "按真实格式导入：客户库存导出表与验货纸（合成样本）",
+      "status": "ready",
+      "owner": null,
+      "depends_on": [
+        "T04"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A05",
+        "A07",
+        "A08"
+      ],
+      "scope": [
+        "import-spike/",
+        "docs/import-contract.md"
+      ],
+      "deliverable": "以 fixtures/synthetic/real-format/ 的两份 xlsx 为准，为库存导出表和验货纸各写一个解析器：输出 ImportLine 形状的记录（原始值+规范值+行号+行级提示），只预览不过账。库存表：文字效期 2027/3/31 解析为纯 date；仓库名后缀 ' NG' 映射为 condition=HOLD（候选，待 Q04）且允许仓位为空；同编码多行不合并；无货主列时由调用方传入货主。验货纸：跳过标题行、识别两行表头、CS×每箱件数换算成 EA 并检查整数、空的实收/多收/少收栏视为未填而非 0。必须避开 T04 spike 的已知缺陷（docs/import-contract.md「已知缺陷」1–6）：提交时按最新台账重新判重；拒绝 bool 数量；备注里的负数和「=」写法也要识别并提示；已确认换算要真的乘系数得到基本单位数量并检查为整数；效期输出纯 date；同一文件混有多个单据版本要报批次错误。 真实文件不得进入仓库。",
+      "evidence": []
+    },
+    {
+      "id": "T04c",
+      "title": "PDF 送货/装箱单：商品行提取（合成文本样本）",
+      "status": "queued",
+      "owner": null,
+      "depends_on": [
+        "T04b"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A07",
+        "A08",
+        "A09"
+      ],
+      "scope": [
+        "import-spike/",
+        "docs/import-contract.md"
+      ],
+      "deliverable": "以 fixtures/synthetic/real-format/pdf_order_extracted_text_synthetic.txt 为准，从 pypdf 提取的文字里还原商品行：序号、编码、规格、单位、描述（跨行拼接）、数量、净重、指定效期（1-Jul-27 → 纯 date）、(Old Code …) 旧编码。行顺序被打乱时按序号重排；任何字段拿不准就标为待人工确认，禁止猜测；中文地址/客户信息乱码时不解析，只保留单号、日期、Cust#。只预览不过账。",
+      "evidence": []
+    },
+    {
+      "id": "T06a",
+      "title": "PostgreSQL 版领域层与真实数据库并发测试（技术部分，不含 Q03/Q04 业务规则）",
+      "status": "ready",
+      "owner": null,
+      "depends_on": [
+        "T03",
+        "T05"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A02",
+        "A05",
+        "A06",
+        "A10"
+      ],
+      "scope": [
+        "application/",
+        "docs/test-commands.md",
+        ".github/workflows/"
+      ],
+      "deliverable": "按 D09 与 docs/deployment.md 第 7 节，把 prototype/inventory/domain.py 的领域命令移植到 application/（Django 5.2 + PostgreSQL 18），保留 D07/I1–I11/operation_id；在 CI 用 postgres:18.6 服务容器跑 deployment.md 7.3 的并发用例（含「接单时未选货位」、钩子+到达信号、去掉 FOR UPDATE 的反例必须失败）。Q03 显示口径与 Q04 单位/NG 规则保持候选标注，不作为业务结论。",
+      "evidence": []
     }
   ]
 }
