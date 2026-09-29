@@ -1,46 +1,29 @@
 # 当前交接
 
-更新：2026-09-29（Claude Code 定时开发例程，T04 进行中）。
+更新：2026-09-29（Claude Code 定时开发例程，状态同步，无新任务可开工）。
 
 ## 当前状态
 
-- `main` = `5be897f`：启动包、T02、T01、T05、T03 已按 #2 → #3 → #4 → #1 → #5 → #6 顺序合并。
-- tasks.json：T01、T02、T03、T05 → done（T03/T05 的 PR 均已合并，evidence 里补了合并记录）；
+- `main` = `1815591`：启动包、T02、T01、T05、T03、T04 已按 #2 → #3 → #4 → #1 → #5 → #6 → #7 顺序合并。
+- tasks.json：T01、T02、T03、T04、T05 → done（各自 PR 均已合并，evidence 里补了合并记录）；
   T06/T07/T08 仍 `blocked`（各自的 Q03/Q04/Q01/Q05 未回答）。
-- **T04 → review**：分支 `agent/claude/T04-import-spike`，基于 `main` `5be897f`，owner
-  `claude-routine`，只有本次例程会话写入。deliverable 是 `import-spike/`（固定模板解析 +
-  行级校验 + 预览 + 重复/修订单识别的 spike，纯 Python，不接 `prototype/` 的 Django 层）、
-  `fixtures/synthetic/`（新增 `import-samples/*.xlsx`、`unit-conversions.json`、
-  `import-ledger.json`，均标 `synthetic: true`）、`docs/import-contract.md`。draft PR 待建，
-  见下方"下一步"。
+- 本轮例程：确认 PR #7（T04）已于 2026-09-29T04:55:45Z 合并（merge commit `1815591`），
+  把 T04 状态由 `review` 改为 `done` 并补合并记录；未开始任何新任务，因为 T06/T07/T08
+  的 `blocked_by` 均非空。分支 `agent/claude/status-sync-2026-09-29`，仅改
+  `docs/tasks.json` 与本文件。
 
-## T04 进度（每一步提交后更新）
-
-| 步骤 | 状态 |
-| --- | --- |
-| 1. tasks.json 状态（T03/T05→done 补合并证据，T04→in_progress）、HANDOFF | 完成 |
-| 2. `import-spike/`：uv 项目骨架 + 依赖锁文件（Python 3.13.12、openpyxl 3.1.5、pytest 9.1.1） | 完成 |
-| 3. `import_spike/importer.py`：解析、行级校验（编码/单位/日期/备注覆盖/文件内疑似重复行）、纯函数 `preview()`、`classify_batch()`、`commit_batch()` | 完成 |
-| 4. 合成 `.xlsx` 样本（`fixtures/synthetic/import-samples/generate_samples.py` 生成）+ 单位换算配置 + 合成台账 | 完成 |
-| 5. `import-spike/tests/test_importer.py`：14 条 pytest，覆盖 A05/A07/A08 | 完成 |
-| 6. `docs/import-contract.md` | 完成 |
-| 7. 状态改 review、补 evidence | 完成 |
-| 8. 开 draft PR | 本轮进行中，见 PR 链接（若已建） |
-
-## 可运行检查（T04 分支）
+## 可运行检查
 
 - `python scripts/check_project.py`（仓库根目录）：PASS（8 项任务、14 项验收定义）。只检查文档和任务格式。
-- `cd import-spike && uv sync && uv run python ../fixtures/synthetic/import-samples/generate_samples.py && uv run pytest -v`：**14 passed**。完整输出见 [import-contract.md](import-contract.md) 第 6 节。
-- 临时变异抽查（未提交）：注释掉"编码存成数字"检查后 1 条测试失败（`test_code_stored_as_number_is_blocked_not_silently_cast`），还原后 14 条全部通过，说明测试能分辨对错。
-- **未运行验证**：真实客户文件、PDF 订单解析（Q02，本任务只做到货/验货 Excel）、生产数据库、
-  与 T06 `PostImport` 的集成、权限。这些都标在 import-contract.md 里，没有谎称已验证。
+- 本轮未改动 `import-spike/`、`prototype/` 或任何应用代码，未重跑其测试。
 
 ## 下一步（一项）
 
-T04 已改为 `review` 并推送；等待 reviewer（Claude 审查者定时任务或人工）在 draft PR 上给结论。
-下一次例程接手时先看 PR 是否已合并（合并了就把 T04 标为 done），再挑下一个未阻塞任务——
-目前 T06/T07/T08 都被业务问题挡住，届时可能要停在 `NOTHING_TO_DO`，直到 Q01/Q03/Q04/Q05
-或"路线"任一问题有答复。
+等待业务方回答 PROJECT.md「关键未决项」表中的 Q01（部署/离线）、Q03（可用库存口径与部分发货）、
+Q04（单位/NG/未知效期规则）、Q05（期初快照是否已扣未出货订单）之一，才能解除 T06/T07/T08 中
+对应任务的阻塞。下一次例程接手时：先重复第 0 步检查未完成分支，再重复第 1 步第 1 点确认是否有
+`review` 任务的 PR 已合并需要补记，然后按 tasks.json 顺序挑选新的可开工任务；若以上业务问题仍未
+回答，预期继续停在 `NOTHING_TO_DO`。
 
 ## 阻塞后续阶段的业务问题
 
@@ -63,8 +46,8 @@ T04 已改为 `review` 并推送；等待 reviewer（Claude 审查者定时任�
 
 ## 历史记录（已合并任务的审查细节见 Git 历史与对应 PR）
 
-- T01（PR #4）、T02（PR #3）、T05（PR #1）、T03（PR #6）均已合并进 `main`；各自的审查往返、
-  修正提交和最终 SHA 见对应 PR 页面，不在此重复。
+- T01（PR #4）、T02（PR #3）、T05（PR #1）、T03（PR #6）、T04（PR #7）均已合并进 `main`；各自的
+  审查往返、修正提交和最终 SHA 见对应 PR 页面，不在此重复。
 - **供参考**：T03 分支曾出现 PR #5、PR #6 在建立后很快被合并（合并人显示为用户账号，具体是否
   为人工操作还是某次会话所为已无法在本轮确认）。两次合并的内容都只是既定的状态/文档变更，
   未发现被篡改的证据，未做回滚。按本轮指令，例程本身在任何情况下都不合并 PR。

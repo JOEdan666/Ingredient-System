@@ -83,7 +83,7 @@
     {
       "id": "T04",
       "title": "固定格式库存与验货导入验证",
-      "status": "review",
+      "status": "done",
       "owner": "claude-routine",
       "depends_on": [
         "T02"
@@ -103,7 +103,8 @@
       "evidence": [
         "docs/import-contract.md §6 (uv run pytest: 14 passed, Linux, Python 3.13.12, openpyxl 3.1.5)",
         "import-spike/tests/test_importer.py",
-        "fixtures/synthetic/import-samples/*.xlsx (synthetic)"
+        "fixtures/synthetic/import-samples/*.xlsx (synthetic)",
+        "PR #7 已合并 (merged_at 2026-09-29T04:55:45Z, merge commit 1815591)"
       ]
     },
     {
