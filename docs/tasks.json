@@ -216,8 +216,8 @@
     {
       "id": "T09",
       "title": "合并前自动测试：GitHub Actions 跑 prototype 与 import-spike 的 pytest",
-      "status": "ready",
-      "owner": null,
+      "status": "review",
+      "owner": "claude-routine",
       "depends_on": [
         "T03",
         "T04"
@@ -231,7 +231,15 @@
         "docs/test-commands.md"
       ],
       "deliverable": "新增工作流（不改现有 project-checks.yml 的行为）：ubuntu-24.04 上用 uv 按锁文件安装并运行 prototype/ 和 import-spike/ 的 pytest；收集到 0 条测试时失败；actions 用 commit SHA 固定版本；docs/test-commands.md 写明本地与 CI 的命令。PostgreSQL 服务容器留给 T06a。",
-      "evidence": []
+      "evidence": [
+        ".github/workflows/pytest.yml (new workflow, does not modify project-checks.yml)",
+        "docs/test-commands.md (local + CI commands, actual local output)",
+        "本地 uv run --frozen pytest -ra: prototype/ 42 passed, import-spike/ 14 passed (Linux, Python 3.13.12, uv 0.8.17, 2026-09-29)",
+        "本地验证 0 条测试时 pytest 退出码为 5（对空目录跑 uv run --frozen pytest -ra /tmp/empty_test_dir）",
+        "python scripts/check_project.py: PASS (12 tasks, 14 acceptance)",
+        "git diff --check origin/main...HEAD: 无输出",
+        "未运行验证：真实 GitHub Actions 环境下本工作流的实际执行结果（含 astral-sh/setup-uv 固定 SHA 的下载与 uv 0.12.20 的安装），由草稿 PR 的 checks 标签验证"
+      ]
     },
     {
       "id": "T04b",

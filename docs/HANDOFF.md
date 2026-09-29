@@ -1,29 +1,62 @@
 # 当前交接
 
-更新：2026-09-29（Claude Code 定时开发例程，状态同步，无新任务可开工）。
+更新：2026-09-29（Claude Code 定时开发例程，T09 已推到 review，等待人工/审查者合并）。
 
 ## 当前状态
 
-- `main` = `1815591`：启动包、T02、T01、T05、T03、T04 已按 #2 → #3 → #4 → #1 → #5 → #6 → #7 顺序合并。
-- tasks.json：T01、T02、T03、T04、T05 → done（各自 PR 均已合并，evidence 里补了合并记录）；
-  T06/T07/T08 仍 `blocked`（各自的 Q03/Q04/Q01/Q05 未回答）。
-- 本轮例程：确认 PR #7（T04）已于 2026-09-29T04:55:45Z 合并（merge commit `1815591`），
-  把 T04 状态由 `review` 改为 `done` 并补合并记录；未开始任何新任务，因为 T06/T07/T08
-  的 `blocked_by` 均非空。分支 `agent/claude/status-sync-2026-09-29`，仅改
-  `docs/tasks.json` 与本文件。
+- `main` = `0064a62`：启动包、T02、T01、T05、T03、T04、状态同步、plan-real-formats 已按
+  #2 → #3 → #4 → #1 → #5 → #6 → #7 → #8 → #9 顺序合并。
+- tasks.json：T01–T05 → done；T06/T07/T08 仍 `blocked`（Q03/Q04/Q01/Q05 未回答）；
+  T09 本轮改为 `review`（见下）；T04b `ready`、T04c `queued`、T06a `ready` 待后续例程按顺序开工。
+- 本轮例程（分支 `agent/claude/T09-ci-pytest`，基准 `main`=`0064a62`）：
+  - 第 0 步：`git branch -r --no-merged origin/main` 一开始因 fetch 时序短暂显示
+    `agent/claude/status-sync-2026-09-29` 未合并，重新 fetch 后确认该分支其实已通过
+    PR #8 合并进 main（`git merge-base --is-ancestor` 验证），不是遗留分支，按空分支处理进入第 1 步。
+  - 第 1 步：未发现 `review` 状态任务需要补记合并状态；按 tasks.json 顺序挑到 T09
+    （合并前自动测试：GitHub Actions 跑 prototype 与 import-spike 的 pytest），
+    depends_on T03/T04 均已 done，blocked_by 为空。
+  - 第 2/3 步：新增 `.github/workflows/pytest.yml`（不改 `project-checks.yml`）：两个
+    `ubuntu-24.04` job（`prototype`、`import-spike`），`actions/checkout` + `astral-sh/setup-uv`
+    均按 commit SHA 固定（用 `git ls-remote --tags` 于 2026-09-29 解析：
+    `actions/checkout` = v4 = `11d5960a326750d5838078e36cf38b85af677262`；
+    `astral-sh/setup-uv` = v9.0.0 = `c771a70e6277c0a99b617c7a806ffedaca235ff9`，
+    uv 版本固定 `0.12.20`，来自 PyPI `uv` 包 2026-09-29 的 latest），
+    各自 `uv run --frozen pytest -ra`。新增 `docs/test-commands.md` 记录本地/CI 命令与实际输出。
+  - 第 4 步：`python scripts/check_project.py` PASS；`git diff --check origin/main...HEAD` 无输出；
+    `prototype/` 与 `import-spike/` 的 `uv run --frozen pytest -ra` 均全部通过（见下）；
+    T09 标记 `review`，evidence 见 tasks.json。
 
-## 可运行检查
+## 可运行检查（本轮实际运行，2026-09-29，Linux 云容器）
 
-- `python scripts/check_project.py`（仓库根目录）：PASS（8 项任务、14 项验收定义）。只检查文档和任务格式。
-- 本轮未改动 `import-spike/`、`prototype/` 或任何应用代码，未重跑其测试。
+```
+$ python scripts/check_project.py
+PASS: 12 tasks, 14 acceptance definitions, synthetic fixture and local links
+
+$ git diff --check origin/main...HEAD
+(无输出)
+
+$ cd prototype && uv run --frozen pytest -ra
+============================== 42 passed in 2.11s ==============================
+
+$ cd import-spike && uv run --frozen pytest -ra
+============================== 14 passed in 0.16s ==============================
+
+$ cd import-spike && uv run --frozen pytest -ra /tmp/empty_test_dir   # 验证 0 条测试时的退出码
+collected 0 items / no tests ran / exit code 5
+```
+
+未运行验证：新工作流在真实 GitHub Actions 上的执行结果（含 `astral-sh/setup-uv` 实际下载、
+uv 0.12.20 在 Actions runner 上的行为）——本地只验证了 pytest 本身的退出码语义，不是 Actions 环境；
+PR 提交后由 Actions 的 checks 标签给出真实结果。
 
 ## 下一步（一项）
 
-等待业务方回答 PROJECT.md「关键未决项」表中的 Q01（部署/离线）、Q03（可用库存口径与部分发货）、
-Q04（单位/NG/未知效期规则）、Q05（期初快照是否已扣未出货订单）之一，才能解除 T06/T07/T08 中
-对应任务的阻塞。下一次例程接手时：先重复第 0 步检查未完成分支，再重复第 1 步第 1 点确认是否有
-`review` 任务的 PR 已合并需要补记，然后按 tasks.json 顺序挑选新的可开工任务；若以上业务问题仍未
-回答，预期继续停在 `NOTHING_TO_DO`。
+T09 的 draft PR 等待审查（Claude 审查者或人工）；本例程不合并任何 PR。下一次例程接手时：
+先重复第 0 步检查 `agent/claude/T09-ci-pytest` 对应的 open PR 是否有
+`REVIEW_VERDICT: CHANGES_REQUESTED` 需要按意见修改，或已合并需要在第 1 步把 T09 记为 `done`；
+若已处理完 T09，再按 tasks.json 顺序挑下一个：T04b（真实格式库存表/验货纸导入）或 T06a
+（PostgreSQL 领域层与并发测试），二者当前都满足开工条件（depends_on 已 done、blocked_by 为空）。
+T06/T07/T08 仍需业务方回答 PROJECT.md「关键未决项」表中的 Q01/Q03/Q04/Q05 之一才能解除阻塞。
 
 ## 阻塞后续阶段的业务问题
 
