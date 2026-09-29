@@ -1,12 +1,40 @@
 # 当前交接
 
-更新：2026-09-29（Codex 定时开发，T06a）。
+## 2026-09-29 Claude 定时例程：T04b 按审查意见修复
+
+- Task/owner/branch：T04b，owner `claude-routine`；分支 `agent/codex/T04b-real-format-import`（继续沿用原分支，未新建）；基准提交 `e1dccf2`（PR #11 head，审查时一致）。
+- 触发：PR #11 上「自动审查（Claude 审查者）@ e1dccf2」评论，`REVIEW_VERDICT: CHANGES_REQUESTED e1dccf23d609847f43f9ddb86eaf17d5b7de3ebb`，与本轮开始时分支 HEAD 完全一致；该 PR 内此类评论仅 1 条（≤2），按规则在原分支上修复。
+- 缺陷与修复：`import-spike/import_spike/real_format.py:104` 的 `parse_stock_export` 把非 NG 仓行的 `condition` 写成字符串 `"SELLABLE"`，但 `docs/domain-model.md`（Condition 一行）与 `prototype/inventory/models.py:32-36` 的枚举只有 `PENDING_INSPECTION / AVAILABLE / HOLD / DAMAGED`；T06 按计划要用该枚举消费这批 `ImportLine`，命名不一致会导致正常库存行在过账时转换失败或被漏记。已把该分支的两处 `"SELLABLE"` 全部改为 `"AVAILABLE"`（赋值处与下方的 `location_missing` 判断条件）。已核对全仓库无其他 `SELLABLE` 引用。
+- 测试：`import-spike/tests/test_real_format.py` 的 `test_stock_export_keeps_rows_and_parses_ng_and_slash_date` 新增断言 `lines[0].condition == "AVAILABLE"`，覆盖正常行应产出的枚举值（此前只断言过 HOLD 行，未断言正常行，这正是审查指出的漏测点）。
+- 实际运行：
+  ```
+  $ cd import-spike && uv run --frozen pytest -q
+  .....................
+  21 passed in 0.61s
+
+  $ python3 scripts/check_project.py
+  PASS: 12 tasks, 14 acceptance definitions, synthetic fixture and local links
+
+  $ git diff --check origin/main...HEAD
+  (无输出)
+  ```
+- 未运行验证：真实文件核对未重新执行（本轮无真实文件访问权限，只跑合成 fixture）；两个解析器仍只预览、不过账，T06 消费端尚未实现，无法端到端验证 `AVAILABLE` 在下游的实际效果。
+- 后续：Claude 对提交 `275d8e1` 的审查已在 PR #11 留下 `REVIEW_VERDICT: PASS`；本次同步 `main` 只解决交接文档冲突，解析器改动保持不变。
+
+## 2026-09-29 Codex 本机 T04b 接手记录
+
+- 基准：`main` 合并 PR #10 后为 `9fca774`；独立分支 `agent/codex/T04b-real-format-import`，owner `codex-local`，状态 `review`。旧交接正文保留为历史快照。
+- 实现：库存导出和验货纸两个只预览的解析器；保留原始值、源行号与行级提示；修复 T04 已知的六类解析/顺序提交缺陷。真实验货纸末尾有汇总行，按结构排除，不当成商品。
+- 验证：`cd import-spike && uv run --frozen pytest -q` → 21 passed；`python3 scripts/check_project.py` → PASS。用户已授权本机核对的真实文件只读运行：库存 478 行、验货纸 50 行，行级错误 0；仅记录这些汇总结果，未提交原件或客户值。
+- 边界：验货纸的库存与实收列标题均为“件”，已是 EA；`Item UOM=CS` 仅表示商品箱规，不能把这两列再乘一次。显式 CS 数量的换算已实现并测试，但这一业务解释仍待 Q04 确认；数据库事务、并发、过账由 T06a/T06 承担。
+- 下一动作：独立复审当前最终提交后再合并。PR #10 已合并；云端定时例程可能还读到旧 `main` 的 T04b=ready，在本分支推送并建 PR 前须防止双人同时写 T04b。
+
+更新：2026-09-29（Codex 同步 main，T04b PR #11 收尾）。
 
 ## 当前状态
 
-- 远端 `main` 基准 `9fca774`，T09 已通过 PR #10 合并；T04b 在独立分支 `agent/codex/T04b-real-format-import`，开放 draft PR #11。T04c 依赖 T04b，仍未开工。
-- 本轮只接 T06a；分支 `agent/codex/T06a-postgres-domain`，基准 `9fca774`。`application/` 移植 T03 的领域模型、命令、迁移与合成数据回归用例，连接 PostgreSQL，不含网页和生产部署。新增锁探针、缺锁反例、13 条 PostgreSQL 并发/失败检查及独立 CI 工作流；见 [test-commands.md](test-commands.md)。
-- T06a 当前为 `review`，已建 [draft PR #12](https://github.com/JOEdan666/Ingredient-System/pull/12)。GitHub 连接器创建 PR 返回 403，已通过登录中的 GitHub 页面完成。Claude 独立审查两次尝试分别被只读 shell 权限和工具预算挡住，尚无有效审查结论。T06/T07/T08 仍因业务问题阻塞。所有库存规则只按 D07/D09 候选设计测试，不代表客户验收。
+- 远端 `main` 已合并 T06a 的 [PR #12](https://github.com/JOEdan666/Ingredient-System/pull/12)；T04b 在独立分支 `agent/codex/T04b-real-format-import`，开放 draft [PR #11](https://github.com/JOEdan666/Ingredient-System/pull/11)，Claude 对其解析器最终改动 `275d8e1` 审查 PASS。T04c 依赖 T04b，仍未开工。
+- `application/` 由 T06a 带入 main：领域模型、命令、迁移与合成数据回归用例连接 PostgreSQL，不含网页和生产部署。新增锁探针、缺锁反例、13 条 PostgreSQL 并发/失败检查及独立 CI 工作流；见 [test-commands.md](test-commands.md)。T06/T07/T08 仍因业务问题阻塞。库存规则只按 D07/D09 候选设计测试，不代表客户验收。
 
 ## 本轮实测与限制
 
@@ -17,7 +45,7 @@
 
 ## 下一步（一项）
 
-独立审查 [draft PR #12](https://github.com/JOEdan666/Ingredient-System/pull/12) 的最终 commit SHA，核查并发、幂等和库存不变量；保留 draft 等人工集成。不要在本例程合并 PR。
+复核 [draft PR #11](https://github.com/JOEdan666/Ingredient-System/pull/11) 同步 main 后的最终差异与 CI，再由有权集成者决定是否合并；合并后才能领取 T04c。不要在本例程合并 PR。
 
 ## 阻塞后续阶段的业务问题
 

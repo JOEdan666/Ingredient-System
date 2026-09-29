@@ -24,7 +24,8 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -51,7 +52,7 @@ REQUIRED_FIELDS = ["owner", "external_doc_no", "code", "name", "quantity", "unit
 
 _DATE_RE_ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _DATE_RE_SLASH = re.compile(r"^(\d{1,2})/(\d{1,2})/(\d{4})$")
-_REMARK_QTY_RE = re.compile(r"实际数量[:：]?\s*(\d+(?:\.\d+)?)")
+_REMARK_QTY_RE = re.compile(r"实际数量\s*[:：=＝]?\s*(-?\d+(?:\.\d+)?)")
 
 
 @dataclass
@@ -80,6 +81,12 @@ class ImportLine:
     external_lot: str | None
     remark: str | None
     errors: list[RowError] = field(default_factory=list)
+    raw_values: dict[str, Any] = field(default_factory=dict)
+    base_quantity: int | None = None
+    base_unit: str | None = None
+    warehouse: str | None = None
+    location: str | None = None
+    condition: str | None = None
 
     @property
     def postable(self) -> bool:
@@ -148,6 +155,8 @@ def _parse_expiry(raw: Any) -> tuple[date | None, str, list[str]]:
     """
     if raw is None or (isinstance(raw, str) and not raw.strip()):
         return None, "unknown", []
+    if isinstance(raw, datetime):
+        return raw.date(), "known", []
     if isinstance(raw, date):
         return raw, "known", []
     text = str(raw).strip()
@@ -212,7 +221,7 @@ def _normalize_row(
 
     quantity_raw = values.get("quantity")
     quantity: float | None
-    if isinstance(quantity_raw, (int, float)):
+    if isinstance(quantity_raw, (int, float)) and not isinstance(quantity_raw, bool):
         quantity = float(quantity_raw)
     else:
         quantity = None
@@ -239,13 +248,14 @@ def _normalize_row(
             )
 
     unit = values.get("unit")
+    base_quantity = None
+    base_unit = None
     if unit is not None:
         base_units = unit_conversions.get("base_units", {})
         confirmed = unit_conversions.get("confirmed", [])
         is_base = bool(base_units.get(unit))
-        is_confirmed = any(
-            c.get("owner") == owner and c.get("code") == code_out and c.get("unit") == unit for c in confirmed
-        )
+        conversion = next((c for c in confirmed if c.get("owner") == owner and c.get("code") == code_out and c.get("unit") == unit), None)
+        is_confirmed = conversion is not None
         if not is_base and not is_confirmed:
             errors.append(
                 RowError(
@@ -256,6 +266,16 @@ def _normalize_row(
                     "block",
                 )
             )
+        elif quantity is not None:
+            try:
+                factor = Decimal(str(conversion["factor_to_base"])) if conversion else Decimal(1)
+                converted = Decimal(str(quantity_raw)) * factor
+                if factor <= 0 or converted != converted.to_integral_value():
+                    raise ValueError("换算后不是整数或系数无效")
+                base_quantity = int(converted)
+                base_unit = conversion.get("base_unit", "EA") if conversion else unit
+            except (InvalidOperation, ValueError, KeyError, TypeError):
+                errors.append(RowError(row_number, "unit", "conversion_invalid", "已确认单位换算无法得到非负整数基本单位数量", "block"))
 
     expiry_raw = values.get("expiry_raw")
     expiry_date, expiry_status, notes = _parse_expiry(expiry_raw)
@@ -278,6 +298,9 @@ def _normalize_row(
         external_lot=values.get("external_lot"),
         remark=values.get("remark"),
         errors=errors,
+        raw_values=dict(values),
+        base_quantity=base_quantity,
+        base_unit=base_unit,
     )
 
 
@@ -360,6 +383,9 @@ def preview(
         batch_errors.append(
             RowError(0, "external_doc_no", "mixed_doc_no", f"同一批文件出现多个外部单号：{sorted(doc_nos)}", "block")
         )
+    versions = {ln.doc_version for ln in lines if ln.doc_version is not None}
+    if len(versions) > 1:
+        batch_errors.append(RowError(0, "doc_version", "mixed_doc_version", "同一文件含多个单据版本", "block"))
 
     owner = next(iter(owners), None)
     external_doc_no = next(iter(doc_nos), None)
@@ -390,7 +416,8 @@ def commit_batch(result: BatchResult, ledger_batches: list[dict], accepted_at: s
     T06's domain layer inside one database transaction; this spike only
     proves the parsing/validation/dedup contract in isolation.
     """
-    if not result.postable:
+    classification, _ = classify_batch(result.fingerprint, result.owner, result.external_doc_no, ledger_batches)
+    if classification != "new" or not result.postable:
         raise ValueError(
             f"批次不可过账：classification={result.classification}, "
             f"batch_errors={result.batch_errors}, "
