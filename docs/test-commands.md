@@ -63,4 +63,6 @@ $ cd application && uv run --frozen python check_concurrency_junit.py /private/t
 concurrency: executed=13, expected>=13, failed=0
 ```
 
-未分配订单竞态参数重复 3 次；其余并发用例各运行一次。钩子停住事务 A 后，测试确认 B 到达加锁点，查 `pg_stat_activity.wait_event_type='Lock'`，再放行 A；未加 `FOR UPDATE` 的专用反例用例能检测到 B 在 A 提交前读到旧量。版本 18 的实际结果以分支 GitHub Actions 记录为准；本机 14 的通过不能替代它。
+未分配订单竞态参数重复 3 次；其余并发用例各运行一次。钩子停住事务 A 后，测试确认 B 到达加锁点，查 `pg_stat_activity.wait_event_type='Lock'`，再放行 A；未加 `FOR UPDATE` 的专用反例用例能检测到 B 在 A 提交前读到旧量。
+
+目标版本 CI 的第一次 push 因工作流 job 级 `env` 不接受 `runner.temp` 表达式而在启动 job 前失败（[失败记录](https://github.com/JOEdan666/Ingredient-System/actions/runs/36531997598)）。移除可选 `UV_CACHE_DIR` 后，[提交 `e2d3ef3` 的 PostgreSQL 18.6 CI](https://github.com/JOEdan666/Ingredient-System/actions/runs/36575919504) 显示 `postgres-domain` job 成功，`Run all domain tests on PostgreSQL 18` 和 `Verify concurrency suite and count` 两步均成功。GitHub 公共 API 对 job 日志返回 403，因此这里不声称从远端读到了逐条测试计数；本机 PostgreSQL 14 的具体计数如上。
