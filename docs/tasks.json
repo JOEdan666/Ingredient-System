@@ -55,7 +55,7 @@
     {
       "id": "T03",
       "title": "合成数据下的四屏流程原型",
-      "status": "review",
+      "status": "done",
       "owner": "claude-cloud",
       "depends_on": [
         "T01",
@@ -76,14 +76,15 @@
       "evidence": [
         "docs/prototype.md §6 (pytest 42 passed on SQLite, macOS rerun after review fixes; simulated persistence, no concurrency proof)",
         "docs/screenshots/t03-*.png (synthetic data)",
-        "PR #6 reviews: Claude reviewer routine comment 5872276215; Codex review (local)"
+        "PR #6 reviews: Claude reviewer routine comment 5872276215; Codex review (local)",
+        "PR #6 已合并 (merged_at 2026-09-29T04:31:49Z, merge commit 5be897f)"
       ]
     },
     {
       "id": "T04",
       "title": "固定格式库存与验货导入验证",
-      "status": "queued",
-      "owner": null,
+      "status": "in_progress",
+      "owner": "claude-routine",
       "depends_on": [
         "T02"
       ],
@@ -104,7 +105,7 @@
     {
       "id": "T05",
       "title": "锁定复用路线或部署与持久化架构",
-      "status": "review",
+      "status": "done",
       "owner": "claude-cloud",
       "depends_on": [
         "T01",
@@ -123,7 +124,8 @@
       "deliverable": "基于 2–3 台电脑选定集中服务路径及数据技术；服务器位置和离线承诺仍为部署待决项，记录备份升级和支持责任",
       "evidence": [
         "docs/DECISIONS.md D09",
-        "docs/deployment.md"
+        "docs/deployment.md",
+        "PR #1 已合并 (merged_at 2026-09-28T14:11:29Z, merge commit b620443)"
       ]
     },
     {
