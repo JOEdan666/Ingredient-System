@@ -244,8 +244,8 @@
     {
       "id": "T04b",
       "title": "按真实格式导入：客户库存导出表与验货纸（合成样本）",
-      "status": "ready",
-      "owner": null,
+      "status": "review",
+      "owner": "codex-local",
       "depends_on": [
         "T04"
       ],
@@ -260,7 +260,11 @@
         "docs/import-contract.md"
       ],
       "deliverable": "以 fixtures/synthetic/real-format/ 的两份 xlsx 为准，为库存导出表和验货纸各写一个解析器：输出 ImportLine 形状的记录（原始值+规范值+行号+行级提示），只预览不过账。库存表：文字效期 2027/3/31 解析为纯 date；仓库名后缀 ' NG' 映射为 condition=HOLD（候选，待 Q04）且允许仓位为空；同编码多行不合并；无货主列时由调用方传入货主。验货纸：跳过标题行、识别两行表头、CS×每箱件数换算成 EA 并检查整数、空的实收/多收/少收栏视为未填而非 0。必须避开 T04 spike 的已知缺陷（docs/import-contract.md「已知缺陷」1–6）：提交时按最新台账重新判重；拒绝 bool 数量；备注里的负数和「=」写法也要识别并提示；已确认换算要真的乘系数得到基本单位数量并检查为整数；效期输出纯 date；同一文件混有多个单据版本要报批次错误。 真实文件不得进入仓库。",
-      "evidence": []
+      "evidence": [
+        "2026-09-29: 本机 import-spike/ uv run --frozen pytest -q → 21 passed；scripts/check_project.py → PASS。",
+        "2026-09-29: 获准只读核对真实 Excel，库存 478 行、验货纸 50 行；行级错误均为 0。仅输出数量与错误类别，原件及真实值未进入仓库。",
+        "未验收：A05 数据库事务/并发、Q04 单位与 NG 业务解释、其它版式及正式过账。"
+      ]
     },
     {
       "id": "T04c",
