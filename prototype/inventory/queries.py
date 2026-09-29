@@ -189,7 +189,7 @@ def order_detail(order_id: int) -> dict | None:
              "open": a.qty_open, "by": a.created_by, "at": a.created_at}
             for a in line.allocations.select_related("balance").order_by("pk")
         ]
-        lines.append({"id": line.pk, "line_no": line.line_no, "product": line.product.code,
+        lines.append({"id": line.pk, "line_no": line.line_no, "product": line.product.code, "source_line": line.source_line,
                       "requested_expiry": line.requested_expiry, "numbers": line_numbers(line),
                       "candidates": candidates, "allocations": allocations})
     return {"id": o.pk, "owner": o.owner.code, "number": o.number, "source_ref": o.source_ref,
@@ -242,6 +242,7 @@ def order_history(number: str) -> list[dict]:
             })
         events.sort(key=lambda e: (e["at"], e["operation"]))
         lines = [{"line_no": line.line_no, "product": line.product.code, "requested_expiry": line.requested_expiry,
+                  "source_line": line.source_line,
                   **line_numbers(line)} for line in o.lines.select_related("product").order_by("line_no")]
         result.append({"owner": o.owner.code, "number": o.number, "source_ref": o.source_ref,
                        "created_by": o.created_by, "created_at": o.created_at, "lines": lines,

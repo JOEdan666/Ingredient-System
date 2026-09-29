@@ -1,7 +1,7 @@
 {% extends "inventory/base.html" %}
 {% block title %}收货{% endblock %}
 {% block content %}
-<h1>收货：预告 → 实收 → 待检 / 合格</h1>
+<div class="page-head"><div><div class="eyebrow">Receiving</div><h1>收货管理</h1><p class="steps"><strong>新建预告</strong> → 登记实收 → 保存验货结果</p></div></div>
 <p class="note">预告只是预计到货，<strong>不增加库存</strong>（I9）。实收时选「待检」则不能出货；选「合格」即使还在收货区（未上架）也可以直接分配出货。</p>
 
 <h2>1. 新建预告</h2>

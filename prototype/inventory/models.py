@@ -213,6 +213,7 @@ class OrderLine(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     qty_ordered = models.IntegerField()
     requested_expiry = models.DateField(null=True, blank=True)
+    source_line = models.CharField(max_length=40, blank=True)  # row in the imported source document (A09)
     # Projections of ReservationEntry / LineCancellation, checked by check_invariants().
     qty_unallocated = models.IntegerField(default=0)
     qty_cancelled = models.IntegerField(default=0)
@@ -324,3 +325,57 @@ class LineCancellation(AppendOnly):
     reason = models.CharField(max_length=20, choices=Reason.choices)
     actor = models.CharField(max_length=40)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ImportBatch(models.Model):
+    """One uploaded file: parsed lines kept for human confirmation, then posted once.
+
+    Lives only in the local prototype database (never in the repository).
+    The uploaded file itself is not kept; only the parsed lines and its hash.
+    """
+
+    class Kind(models.TextChoices):
+        STOCK = "stock", "库存表（期初库存）"
+        INSPECTION = "inspection", "验货纸（收货预告）"
+        PDF_ORDER = "pdf_order", "PDF 送货单（出库订单）"
+
+    class Status(models.TextChoices):
+        PREVIEW = "PREVIEW", "待确认"
+        POSTED = "POSTED", "已入账"
+
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    file_name = models.CharField(max_length=200)
+    file_sha256 = models.CharField(max_length=64)
+    owner_code = models.CharField(max_length=40)
+    external_doc_no = models.CharField(max_length=80, blank=True)
+    doc_date = models.DateField(null=True, blank=True)  # date printed on a PDF order
+    # Cutover boundary for a stock snapshot (Q05), stated by a person when posting.
+    snapshot_at = models.DateTimeField(null=True, blank=True)
+    export_basis = models.CharField(max_length=20, blank=True)
+    lines = models.JSONField(default=list)
+    batch_errors = models.JSONField(default=list)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PREVIEW)
+    created_at = models.DateTimeField(auto_now_add=True)
+    posted_at = models.DateTimeField(null=True, blank=True)
+    posted_by = models.CharField(max_length=40, blank=True)
+    result = models.JSONField(null=True, blank=True)
+
+    @property
+    def recognized(self):
+        return len(self.lines)
+
+    @property
+    def postable_count(self):
+        return sum(1 for line in self.lines if line["postable"])
+
+    @property
+    def blocked_count(self):
+        return self.recognized - self.postable_count
+
+    @property
+    def problem_count(self):
+        return self.blocked_count + len(self.batch_errors)
+
+    @property
+    def ready(self):
+        return bool(self.lines) and not self.batch_errors and self.blocked_count == 0

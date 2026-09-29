@@ -1,0 +1,118 @@
+{% extends "inventory/base.html" %}
+{% block title %}导入 #{{ batch.pk }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">IMPORT #{{ batch.pk }}</div>
+    <h1>{{ batch.get_kind_display }}</h1>
+    <p class="steps">① 选文件和货主 → <strong>{% if batch.status == 'POSTED' %}③ 已入账{% else %}② 核对内容，然后确认入账{% endif %}</strong></p>
+  </div>
+  <a href="{% url 'import_preview' %}">← 导入另一个文件</a>
+</div>
+
+<div class="card">
+  <div class="grid facts">
+    <div><span class="muted">文件</span><div>{{ batch.file_name }}</div></div>
+    <div><span class="muted">货主</span><div>{{ batch.owner_code }}{% if not owner_exists %} <span class="tag PENDING_INSPECTION">新货主，入账时创建</span>{% endif %}</div></div>
+    <div><span class="muted">单号</span><div>{{ batch.external_doc_no|default:"—" }}</div></div>
+    <div><span class="muted">读出行数</span><div class="big">{{ batch.recognized }}</div></div>
+    <div><span class="muted">行检查通过</span><div class="big">{{ batch.postable_count }}</div></div>
+    <div><span class="muted">行需要处理</span><div class="big {% if batch.problem_count %}bad{% endif %}">{{ batch.problem_count }}</div></div>
+    <div><span class="muted">整份状态</span><div>{% if batch.status == 'POSTED' %}<span class="tag AVAILABLE">已入账</span>{% elif blocker or not batch.ready %}<span class="tag HOLD">不能入账</span>{% else %}<span class="tag PENDING_INSPECTION">可以确认入账</span>{% endif %}</div></div>
+  </div>
+</div>
+
+{% if batch.status == 'POSTED' %}
+<div class="card done">
+  <h2>✅ 已入账（{{ batch.posted_by }}，{{ batch.posted_at|date:"Y-m-d H:i" }}）</h2>
+  {% if batch.result.kind == 'stock' %}
+    <p>{{ batch.result.lines }} 行期初库存已写入：可用 {{ batch.result.sellable }} 件，冻结（NG 仓）{{ batch.result.hold }} 件。</p>
+    <p class="muted">期初切换点：{{ batch.result.snapshot_at }} 导出，数字为{{ batch.result.export_basis }}。</p>
+    <p><a href="{% url 'inventory' %}?owner={{ batch.owner_code }}">去「库存」页查看 {{ batch.owner_code }} 的库存 →</a></p>
+  {% elif batch.result.kind == 'inspection' %}
+    <p>已生成收货预告 {{ batch.external_doc_no }}（{{ batch.result.lines }} 行，共 {{ batch.result.qty }} 件）。库存还<b>没有</b>增加，要等货到后实收。</p>
+    <p><a href="{% url 'receiving' %}">去「收货」页确认实收 →</a></p>
+  {% else %}
+    <p>已接下订单 {{ batch.external_doc_no }}（{{ batch.result.lines }} 行，共 {{ batch.result.qty }} 件），可用库存已相应减少。每个订单行都记下了原件行号。</p>
+    {% if batch.result.cutover_confirmed_by %}<p class="muted">{{ batch.result.cutover_confirmed_by }} 确认：导出库存表时这张单尚未扣减。</p>{% endif %}
+    <p><a href="{% url 'order_detail' batch.result.order_id %}">去这张订单选货位、发货 →</a></p>
+  {% endif %}
+</div>
+{% else %}
+
+{% if problems %}
+<div class="card problems">
+  <h2>需要你处理的问题</h2>
+  {% for p in problems %}
+    <div class="problem"><b>{{ p.count }} 行：{{ p.message }}</b><br><span>怎么办：{{ p.advice }}</span></div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if unit_rows %}
+<form method="post" action="{% url 'import_units' batch.pk %}" class="card">
+  <h2>逐行确认单位</h2>
+  <p class="muted">对照纸质单据：数量栏的数字是「件数」还是「箱数」？选按箱时填每箱几件。系统会记下是谁确认的。</p>
+  <table>
+    <thead><tr><th>行</th><th>商品</th><th>名称</th><th>规格</th><th class="num">数量栏印的数字</th><th>这个数字是</th><th>每箱件数</th></tr></thead>
+    <tbody>
+    {% for l in unit_rows %}
+      <tr><td>{{ l.row }}</td><td>{{ l.code }}</td><td>{{ l.name|truncatechars:40 }}</td><td>{{ l.size|default:"—" }} {{ l.item_unit|default:"" }}</td><td class="num">{{ l.printed_qty }}</td>
+      <td><label class="check"><input type="radio" name="unit_{{ l.row }}" value="EA" required onchange="this.form.per_case_{{ l.row }}.required=false"> 件数</label> <label class="check"><input type="radio" name="unit_{{ l.row }}" value="CS" onchange="this.form.per_case_{{ l.row }}.required=true"> 箱数</label></td>
+      <td><input type="number" min="1" name="per_case_{{ l.row }}" placeholder="按箱时填" class="per-case"></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="filter-actions">{% include "inventory/_op.html" %}<button type="submit">保存单位确认</button></div>
+</form>
+{% endif %}
+
+<div class="card confirm">
+  {% if blocker %}
+    <h2>不能入账</h2>
+    <div class="problem"><b>{{ blocker }}</b></div>
+  {% elif batch.ready %}
+    <h2>确认入账</h2>
+    <p>
+    {% if batch.kind == 'stock' %}将把 {{ batch.recognized }} 行作为货主 <b>{{ batch.owner_code }}</b> 的期初库存写入。每个货主只能导一次库存表。
+    {% elif batch.kind == 'inspection' %}将生成收货预告 <b>{{ batch.external_doc_no }}</b>（{{ batch.recognized }} 行）。库存要等实收后才增加；系统里没有的商品会自动建立。
+    {% else %}将接下订单 <b>{{ batch.external_doc_no }}</b>（{{ batch.recognized }} 行），立即占用可用库存；可用不够会整单拒绝。{% endif %}
+    </p>
+    <form method="post" action="{% url 'import_post' batch.pk %}" class="cutover">
+      {% if batch.kind == 'stock' %}
+      <p><b>期初切换点（必填，会记录下来）</b><br><span class="muted">期初数字从哪个时间点开始算，决定了之后哪些订单还要扣库存。</span></p>
+      <label>这份库存表是什么时候从客户系统导出的？<input type="datetime-local" name="snapshot_at" required></label>
+      <div>表里的数字是：
+        {% for key, label in export_basis.items %}<label class="check"><input type="radio" name="export_basis" value="{{ key }}" required> {{ label }}</label>{% endfor %}
+      </div>
+      {% endif %}
+      {% if cutover_question %}
+      <div class="problem"><b>{{ cutover_question }}</b><br>
+        <label class="check"><input type="checkbox" name="confirm_not_in_snapshot" value="1" required> 我已核对：导出库存表时，这张单还没有发货、也没有从客户系统库存里扣掉</label></div>
+      {% endif %}
+      <div class="filter-actions">{% include "inventory/_op.html" %}<button type="submit">确认入账</button></div>
+    </form>
+  {% else %}
+    <h2>暂不能入账</h2>
+    <p>还有 {{ batch.blocked_count }} 行{% if batch.batch_errors %}和整份单据的问题{% endif %}需要先处理（见上方「需要你处理的问题」）。为了不写错库存，整份文件要么全部入账，要么都不入。</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<details class="card">
+  <summary>查看全部 {{ batch.recognized }} 行明细</summary>
+  <table>
+    <thead><tr><th>源行</th><th>商品编码</th><th>名称</th><th class="num">数量</th><th>单位</th><th>效期</th><th>货位 / 状态</th><th>检查结果</th></tr></thead>
+    <tbody>
+    {% for l in batch.lines %}
+      <tr>
+        <td>{{ l.row }}</td><td>{{ l.code|default:"—" }}</td><td>{{ l.name|default:"—"|truncatechars:48 }}</td>
+        <td class="num">{{ l.qty|default_if_none:"—" }}</td><td>{{ l.unit|default:"—" }}</td><td>{{ l.expiry|default:"未知" }}</td>
+        <td>{{ l.location|default:l.warehouse|default:"—" }}{% if l.condition %} / {% if l.condition == 'AVAILABLE' %}合格{% else %}冻结{% endif %}{% endif %}</td>
+        <td>{% if l.postable %}<span class="tag AVAILABLE">可入账</span>{% if l.unit_note %}<div class="muted">{{ l.unit_note }}</div>{% endif %}{% else %}{% for e in l.errors %}<div class="tag HOLD">{{ e.message }}</div>{% endfor %}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</details>
+{% endblock %}

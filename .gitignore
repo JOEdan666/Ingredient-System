@@ -25,3 +25,6 @@ __pycache__/
 *.xls
 *.pdf
 *.docx
+
+# local virtualenvs (created from the lockfile, never committed)
+.venv

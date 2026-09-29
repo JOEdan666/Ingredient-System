@@ -1,7 +1,7 @@
 {% extends "inventory/base.html" %}
 {% block title %}历史查询{% endblock %}
 {% block content %}
-<h1>历史查询</h1>
+<div class="page-head"><div><div class="eyebrow">Traceability</div><h1>历史查询</h1><p>按订单号追查发货批次、货位和每一步操作。</p></div></div>
 <form method="get" class="card inline"><label>订单号 <input name="number" value="{{ number }}" required placeholder="例如 DEMO-O1"></label> <button>查询</button></form>
 
 {% if results is not None %}
@@ -11,7 +11,7 @@
   <p class="muted">原件：{{ o.source_ref|default:"未登记" }} · 接单：{{ o.created_by }} {{ o.created_at|date:"Y-m-d H:i:s" }}（显示为香港时间，存储为 UTC）</p>
   <table>
     <tr><th>行</th><th>商品</th><th>指定效期</th><th class="num">订购</th><th class="num">已发</th><th class="num">已分配未发</th><th class="num">未选货位</th><th class="num">已取消</th></tr>
-    {% for l in o.lines %}<tr><td>{{ l.line_no }}</td><td>{{ l.product }}</td><td>{{ l.requested_expiry|date:"Y-m-d"|default:"—" }}</td>
+    {% for l in o.lines %}<tr><td>{{ l.line_no }}{% if l.source_line %}<div class="muted">原件{{ l.source_line }}</div>{% endif %}</td><td>{{ l.product }}</td><td>{{ l.requested_expiry|date:"Y-m-d"|default:"—" }}</td>
       <td class="num">{{ l.ordered }}</td><td class="num">{{ l.shipped }}</td><td class="num">{{ l.allocated_open }}</td><td class="num">{{ l.unallocated }}</td><td class="num">{{ l.cancelled }}</td></tr>{% endfor %}
   </table>
 

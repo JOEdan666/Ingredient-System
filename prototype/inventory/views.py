@@ -2,6 +2,7 @@
 inventory.queries only; no quantity logic lives here.
 """
 import uuid
+from datetime import datetime
 
 from django.contrib import messages
 from django.core.management import call_command
@@ -11,10 +12,13 @@ from django.views.decorators.http import require_POST
 
 from . import domain, queries
 from .domain import DomainError
-from .models import Condition, LineCancellation, Location, OrderLine, Owner
+from . import import_posting
+from .import_preview import PreviewError, parse_upload, problem_summary, recheck
+from .models import Condition, ImportBatch, LineCancellation, Location, OrderLine, Owner
 from .synthetic import load_synthetic_fixture
 
 SYNTHETIC_ACTORS = ["员工甲（合成）", "员工乙（合成）", "员工丙（合成）"]
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 
 
 def _ctx(request, **extra):
@@ -87,6 +91,110 @@ def reset_synthetic(request):
     result = load_synthetic_fixture()
     messages.success(request, f"已清空本地原型数据并重新载入合成数据（{result['rows']} 行期初）。")
     return redirect("inventory")
+
+
+# 文件预览 -----------------------------------------------------------------
+
+def import_preview_page(request):
+    """Step 1: choose a file and an owner. The kind of file is detected from its content."""
+    if request.method == "POST":
+        upload = request.FILES.get("file")
+        owner = (request.POST.get("owner_new") or "").strip() or (request.POST.get("owner") or "").strip()
+        if upload is None:
+            messages.error(request, "请先点「选择文件」选一个库存表、验货纸或 PDF 送货单。")
+        elif upload.size > MAX_UPLOAD_BYTES:
+            messages.error(request, "文件超过 15 MB，拒绝在原型中解析。")
+        else:
+            try:
+                batch = parse_upload(upload, owner_code=owner, external_doc_no=request.POST.get("external_doc_no", ""))
+            except PreviewError as err:
+                messages.error(request, str(err))
+            else:
+                batch.save()
+                return redirect("import_detail", batch_id=batch.pk)
+    # Owners already in the system, plus owners typed for files not posted yet,
+    # so a person never has to type the same owner twice.
+    names = dict(Owner.objects.order_by("code").values_list("code", "name"))
+    for code in ImportBatch.objects.values_list("owner_code", flat=True).distinct():
+        names.setdefault(code, code)
+    owners = [{"code": c, "name": n} for c, n in sorted(names.items())]
+    return render(request, "inventory/import_preview.html", _ctx(
+        request, owners=owners, default_owner=owners[0]["code"] if len(owners) == 1 else "",
+        batches=[(b, import_posting.blocker_for(b)) for b in ImportBatch.objects.order_by("-pk")[:10]],
+    ))
+
+
+def import_detail(request, batch_id):
+    """Step 2: look at what was read, fix units if needed, then confirm posting."""
+    batch = ImportBatch.objects.filter(pk=batch_id).first()
+    if batch is None:
+        raise Http404
+    recheck(batch)
+    return render(request, "inventory/import_detail.html", _ctx(
+        request, batch=batch, problems=problem_summary(batch),
+        unit_rows=[l for l in batch.lines if any(e["code"] == "unit_needs_confirmation" for e in l["errors"])],
+        owner_exists=Owner.objects.filter(code=batch.owner_code).exists(),
+        blocker=import_posting.blocker_for(batch),
+        cutover_question=import_posting.order_needs_cutover_check(batch),
+        export_basis=import_posting.EXPORT_BASIS,
+    ))
+
+
+@require_POST
+def import_units(request, batch_id):
+    batch = ImportBatch.objects.filter(pk=batch_id).first()
+    if batch is None:
+        raise Http404
+    choices = {}
+    for line in batch.lines:
+        unit = request.POST.get(f"unit_{line['row']}", "")
+        if unit in ("EA", "CS"):
+            raw = request.POST.get(f"per_case_{line['row']}", "").strip()
+            per_case = int(raw) if raw.isdigit() else None
+            choices[line["row"]] = (unit, per_case)
+    try:
+        done = import_posting.confirm_units(batch, choices, request.POST.get("actor", ""))
+    except DomainError as err:
+        messages.error(request, f"单位确认被拒绝：{err.message}")
+    else:
+        if done:
+            messages.success(request, f"已确认 {done} 行的单位。")
+        else:
+            messages.error(request, "没有选择任何单位：请在每一行选「按件」或「按箱」。")
+    return redirect("import_detail", batch_id=batch_id)
+
+
+@require_POST
+def import_post(request, batch_id):
+    snapshot_at = None
+    raw = request.POST.get("snapshot_at", "").strip()
+    if raw:
+        try:
+            snapshot_at = datetime.fromisoformat(raw)
+        except ValueError:
+            messages.error(request, f"导出时间「{raw}」看不懂，请用日期时间选择器填写。")
+            return redirect("import_detail", batch_id=batch_id)
+    try:
+        result = import_posting.post_batch(
+            batch_id, request.POST.get("actor", ""), snapshot_at=snapshot_at,
+            export_basis=request.POST.get("export_basis", ""),
+            confirm_not_in_snapshot=request.POST.get("confirm_not_in_snapshot") == "1",
+        )
+    except ImportBatch.DoesNotExist:
+        raise Http404
+    except DomainError as err:
+        messages.error(request, f"入账被拒绝，什么都没有写入：{err.message}")
+    else:
+        messages.success(request, f"入账完成：{result['lines']} 行已写入。")
+    return redirect("import_detail", batch_id=batch_id)
+
+
+@require_POST
+def reset_empty(request):
+    """Prototype convenience only: wipe the local SQLite data so real files start from nothing."""
+    call_command("flush", interactive=False, verbosity=0)
+    messages.success(request, "已清空本机原型数据。现在可以从库存表开始导入真实文件。")
+    return redirect("import_preview")
 
 
 # 收货 ---------------------------------------------------------------------

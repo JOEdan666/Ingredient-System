@@ -295,6 +295,35 @@
       ]
     },
     {
+      "id": "T04e",
+      "title": "文件导入：上传 → 核对 → 确认入账（本机原型）",
+      "status": "review",
+      "owner": "claude-local (2026-09-30)",
+      "depends_on": [
+        "T03",
+        "T04b"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A07",
+        "A08",
+        "A09"
+      ],
+      "scope": [
+        "prototype/",
+        "scripts/run_acceptance_review.sh",
+        ".codex/agents/acceptance-reviewer.toml",
+        ".claude/"
+      ],
+      "deliverable": "原型的「文件导入」页真正能导入：自动识别库存表/验货纸/PDF 送货单；货主从已有中选或新建；解析结果存为导入记录供人核对；整箱单位由人逐行确认并留痕；确认后一个事务内经领域命令入账（库存表→期初、验货纸→收货预告、PDF→接单占用），任何一行失败全部撤销；同一文件或同一货主第二份库存表在确认前就提示并拒绝。只在本机 SQLite，不证明并发（D09 仍需 PostgreSQL）。映射规则是候选，待业务确认（Q05、Q04、验货纸含义）。 也调用 T04c 的 PDF 解析器（已随 PR #13 合入 main，T04c 本身的验收状态不变）。",
+      "evidence": [
+        "2026-09-30: prototype pytest → 55 passed（新增 tests/test_imports.py 9 条：新手默认路径、重复文件/同货主第二份库存表在确认前与入账时都拒绝、验货纸只生成预告不加库存、PDF 可用不足整单回滚、单位必须人工明确选择并留名、库存表中途失败全部撤销）；import-spike → 44 passed；check_project PASS。",
+        "2026-09-30: 反例：去掉重复文件检查、或把 NG 行一律当合格，分别有 1 条 / 2 条测试失败；还原后 55 passed。",
+        "2026-09-30: 本机真实文件（仓库外，用户授权）用无头 Chrome 真实点击（drive.mjs）从空库走完：库存表 478 行入账；PDF1 9 行接单占用；验货纸 50 行生成预告；PDF2 人工确认 3 行单位后因其中一个商品可用为 0 整单拒绝（正确）；同一库存表再次上传在确认前即提示拒绝。只记录计数，截图只在本机临时目录。",
+        "未验收：独立验收审查者对最终提交的结论（见 docs/HANDOFF.md）；Q05/Q04/验货纸业务含义；PostgreSQL 上的并发。"
+      ]
+    },
+    {
       "id": "T06a",
       "title": "PostgreSQL 版领域层与真实数据库并发测试（技术部分，不含 Q03/Q04 业务规则）",
       "status": "review",

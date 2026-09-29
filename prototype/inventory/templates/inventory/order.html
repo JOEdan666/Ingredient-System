@@ -6,7 +6,7 @@
 
 {% for l in order.lines %}
 <div class="card">
-  <strong>第 {{ l.line_no }} 行 · 商品 {{ l.product }}</strong> {% if l.requested_expiry %}<span class="tag">指定效期 {{ l.requested_expiry|date:"Y-m-d" }}</span>{% endif %}
+  <strong>第 {{ l.line_no }} 行 · 商品 {{ l.product }}</strong>{% if l.source_line %} <span class="muted">原件{{ l.source_line }}</span>{% endif %} {% if l.requested_expiry %}<span class="tag">指定效期 {{ l.requested_expiry|date:"Y-m-d" }}</span>{% endif %}
   <table>
     <tr><th class="num">订购</th><th class="num">未选货位</th><th class="num">已分配未发</th><th class="num">已发</th><th class="num">已取消</th></tr>
     <tr><td class="num">{{ l.numbers.ordered }}</td><td class="num">{{ l.numbers.unallocated }}</td><td class="num">{{ l.numbers.allocated_open }}</td>
