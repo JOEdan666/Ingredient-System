@@ -6,18 +6,18 @@
 
 - 远端 `main` 基准 `9fca774`，T09 已通过 PR #10 合并；T04b 在独立分支 `agent/codex/T04b-real-format-import`，开放 draft PR #11。T04c 依赖 T04b，仍未开工。
 - 本轮只接 T06a；分支 `agent/codex/T06a-postgres-domain`，基准 `9fca774`。`application/` 移植 T03 的领域模型、命令、迁移与合成数据回归用例，连接 PostgreSQL，不含网页和生产部署。新增锁探针、缺锁反例、13 条 PostgreSQL 并发/失败检查及独立 CI 工作流；见 [test-commands.md](test-commands.md)。
-- T06a 当前为 `review`。GitHub 连接器创建 draft PR 返回 403（integration 无权限），浏览器入口超时；分支 push 已触发 PostgreSQL 18 CI。Claude 审查工具此前返回 extra usage 已用尽，尚无独立审查。T06/T07/T08 仍因业务问题阻塞。所有库存规则只按 D07/D09 候选设计测试，不代表客户验收。
+- T06a 当前为 `review`，已建 [draft PR #12](https://github.com/JOEdan666/Ingredient-System/pull/12)。GitHub 连接器创建 PR 返回 403，已通过登录中的 GitHub 页面完成。Claude 独立审查两次尝试分别被只读 shell 权限和工具预算挡住，尚无有效审查结论。T06/T07/T08 仍因业务问题阻塞。所有库存规则只按 D07/D09 候选设计测试，不代表客户验收。
 
 ## 本轮实测与限制
 
 - `python3 scripts/check_project.py`：`PASS: 12 tasks, 14 acceptance definitions, synthetic fixture and local links`。
 - 本机 PostgreSQL 14.22 临时测试库：`application/` 的 `uv run --frozen pytest -ra` 为 **43 passed**；并发子集 **13 passed, 30 deselected**；计数脚本 `executed=13, expected>=13, failed=0`。这是本机数据库调试，不是目标 PostgreSQL 18 的测试结论。
-- 目标 18.6 CI 首次未启动 job：GitHub 报 `(Line: 37, Col: 21): Unrecognized named-value: 'runner'`。删除 job 级 `UV_CACHE_DIR` 后，提交 `e2d3ef3` 的 [Actions run 36575919504](https://github.com/JOEdan666/Ingredient-System/actions/runs/36575919504) 显示 `postgres-domain` 成功，全部测试及并发计数步骤均成功。此结果是合成数据技术测试，不是客户业务验收。Windows 安装/升级、真实客户数据、真实业务验收均未执行。
+- 目标 18.6 CI 首次未启动 job：GitHub 报 `(Line: 37, Col: 21): Unrecognized named-value: 'runner'`。删除 job 级 `UV_CACHE_DIR` 后，提交 `e2d3ef3` 的 [Actions run 36575919504](https://github.com/JOEdan666/Ingredient-System/actions/runs/36575919504) 和提交 `449d201` 的 [Actions run 36576125734](https://github.com/JOEdan666/Ingredient-System/actions/runs/36576125734) 均显示 `postgres-domain` 成功，全部测试及并发计数步骤均成功。此结果是合成数据技术测试，不是客户业务验收。Windows 安装/升级、真实客户数据、真实业务验收均未执行。
 - 详细命令、版本、并发钩子与限制见 [test-commands.md](test-commands.md)。
 
 ## 下一步（一项）
 
-取得 GitHub PR 写权限后为 T06a 创建 draft PR，并独立审查最终 commit SHA；保留 draft 等人工集成。不要在本例程合并 PR。
+独立审查 [draft PR #12](https://github.com/JOEdan666/Ingredient-System/pull/12) 的最终 commit SHA，核查并发、幂等和库存不变量；保留 draft 等人工集成。不要在本例程合并 PR。
 
 ## 阻塞后续阶段的业务问题
 

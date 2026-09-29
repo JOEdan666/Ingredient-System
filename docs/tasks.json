@@ -309,7 +309,7 @@
         "application/tests/test_domain.py (29 PostgreSQL domain regression cases)",
         "application/tests/test_concurrency.py (13 marked PostgreSQL concurrency/failure cases; 13 passed locally on PostgreSQL 14.22)",
         "application/check_concurrency_junit.py (13 executed, 0 failed on local run)",
-        ".github/workflows/db-tests.yml (PostgreSQL 18.6 target; task branch push CI result pending)",
+        ".github/workflows/db-tests.yml (PostgreSQL 18.6 target; Actions runs 36575919504 and 36576125734 succeeded; draft PR #12)",
         "docs/test-commands.md (exact setup, versions, commands, results, limitations)"
       ]
     }
