@@ -7,11 +7,12 @@
 - `main` = `5be897f`：启动包、T02、T01、T05、T03 已按 #2 → #3 → #4 → #1 → #5 → #6 顺序合并。
 - tasks.json：T01、T02、T03、T05 → done（T03/T05 的 PR 均已合并，evidence 里补了合并记录）；
   T06/T07/T08 仍 `blocked`（各自的 Q03/Q04/Q01/Q05 未回答）。
-- **T04 进行中**：分支 `agent/claude/T04-import-spike`，基于 `main` `5be897f`，owner `claude-routine`，
-  只有本次例程会话写入。deliverable 是 `import-spike/`（固定模板解析 + 行级校验 + 预览 +
-  重复/修订单识别的 spike，纯 Python，不接 `prototype/` 的 Django 层）、
+- **T04 → review**：分支 `agent/claude/T04-import-spike`，基于 `main` `5be897f`，owner
+  `claude-routine`，只有本次例程会话写入。deliverable 是 `import-spike/`（固定模板解析 +
+  行级校验 + 预览 + 重复/修订单识别的 spike，纯 Python，不接 `prototype/` 的 Django 层）、
   `fixtures/synthetic/`（新增 `import-samples/*.xlsx`、`unit-conversions.json`、
-  `import-ledger.json`，均标 `synthetic: true`）、`docs/import-contract.md`。
+  `import-ledger.json`，均标 `synthetic: true`）、`docs/import-contract.md`。draft PR 待建，
+  见下方"下一步"。
 
 ## T04 进度（每一步提交后更新）
 
@@ -23,7 +24,8 @@
 | 4. 合成 `.xlsx` 样本（`fixtures/synthetic/import-samples/generate_samples.py` 生成）+ 单位换算配置 + 合成台账 | 完成 |
 | 5. `import-spike/tests/test_importer.py`：14 条 pytest，覆盖 A05/A07/A08 | 完成 |
 | 6. `docs/import-contract.md` | 完成 |
-| 7. 状态改 review、补 evidence、开 draft PR | 待做（本轮最后一步） |
+| 7. 状态改 review、补 evidence | 完成 |
+| 8. 开 draft PR | 本轮进行中，见 PR 链接（若已建） |
 
 ## 可运行检查（T04 分支）
 
@@ -35,8 +37,10 @@
 
 ## 下一步（一项）
 
-跑完 T04 的交付检查（`git diff --check`、`check_project.py`、pytest）后，把 T04 状态改为
-`review`、补 evidence，推送并开 draft PR。
+T04 已改为 `review` 并推送；等待 reviewer（Claude 审查者定时任务或人工）在 draft PR 上给结论。
+下一次例程接手时先看 PR 是否已合并（合并了就把 T04 标为 done），再挑下一个未阻塞任务——
+目前 T06/T07/T08 都被业务问题挡住，届时可能要停在 `NOTHING_TO_DO`，直到 Q01/Q03/Q04/Q05
+或"路线"任一问题有答复。
 
 ## 阻塞后续阶段的业务问题
 

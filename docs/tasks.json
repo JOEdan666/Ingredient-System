@@ -83,7 +83,7 @@
     {
       "id": "T04",
       "title": "固定格式库存与验货导入验证",
-      "status": "in_progress",
+      "status": "review",
       "owner": "claude-routine",
       "depends_on": [
         "T02"
@@ -100,7 +100,11 @@
         "docs/import-contract.md"
       ],
       "deliverable": "合成模板解析、行级错误、预览、重复及修订单识别方案；真实样本仅限获准私有环境验证",
-      "evidence": []
+      "evidence": [
+        "docs/import-contract.md §6 (uv run pytest: 14 passed, Linux, Python 3.13.12, openpyxl 3.1.5)",
+        "import-spike/tests/test_importer.py",
+        "fixtures/synthetic/import-samples/*.xlsx (synthetic)"
+      ]
     },
     {
       "id": "T05",
