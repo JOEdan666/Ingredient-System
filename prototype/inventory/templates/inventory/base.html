@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}仓库原型{% endblock %} · T03 合成数据原型</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1d2330; --muted:#5b6474; --line:#dde1e7; --accent:#2457c5;
+          --warn-bg:#fff4d6; --warn-ink:#6b4b00; --ok:#1d7a3a; --bad:#b3261e; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 14px/1.5 system-ui, "Microsoft YaHei", "PingFang SC", sans-serif; background:var(--bg); color:var(--ink); }
+  .sim { background:var(--warn-bg); color:var(--warn-ink); border-bottom:1px solid #e8d28f; padding:8px 16px; font-weight:600; }
+  header { background:var(--card); border-bottom:1px solid var(--line); padding:10px 16px; display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+  header strong { font-size:16px; }
+  nav a { margin-right:14px; color:var(--accent); text-decoration:none; font-weight:600; }
+  nav a.on { color:var(--ink); border-bottom:2px solid var(--ink); }
+  main { padding:16px; max-width:1280px; margin:0 auto; }
+  h1 { font-size:20px; margin:4px 0 12px; }
+  h2 { font-size:16px; margin:20px 0 8px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:12px; margin-bottom:14px; overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; }
+  th, td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; white-space:nowrap; }
+  th { background:#f0f2f5; font-weight:600; }
+  td.num, th.num { text-align:right; font-variant-numeric: tabular-nums; }
+  .big { font-size:18px; font-weight:700; }
+  .muted { color:var(--muted); font-size:12px; }
+  .tag { display:inline-block; padding:0 6px; border-radius:3px; font-size:12px; background:#eef1f6; }
+  .tag.AVAILABLE { background:#e3f4e8; color:var(--ok); }
+  .tag.PENDING_INSPECTION { background:#fff0d0; color:#7a5200; }
+  .tag.HOLD, .tag.DAMAGED { background:#fbe3e1; color:var(--bad); }
+  form.inline { display:inline-flex; gap:4px; align-items:center; flex-wrap:wrap; }
+  input, select, button { font:inherit; padding:3px 6px; border:1px solid #c6ccd6; border-radius:4px; background:#fff; }
+  input[type=number] { width:80px; }
+  button { background:var(--accent); color:#fff; border-color:var(--accent); cursor:pointer; }
+  button.secondary { background:#fff; color:var(--accent); }
+  button.danger { background:var(--bad); border-color:var(--bad); }
+  .msgs { list-style:none; padding:0; margin:0 0 12px; }
+  .msgs li { padding:8px 10px; border-radius:4px; margin-bottom:6px; }
+  .msgs .success { background:#e3f4e8; } .msgs .error { background:#fbe3e1; } .msgs .warning { background:var(--warn-bg); }
+  details summary { cursor:pointer; color:var(--accent); }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:8px; }
+  .note { border-left:3px solid #e8d28f; padding:4px 8px; background:#fffaf0; margin:8px 0; }
+</style>
+</head>
+<body>
+<div class="sim" role="note">模拟持久化（本机 SQLite），不证明并发和锁 · 全部为合成数据 · 候选界面，数量含义待业务确认（Q03）</div>
+<header>
+  <strong>仓库管理原型（T03）</strong>
+  <nav>
+    <a href="{% url 'inventory' %}" class="{% if request.resolver_match.url_name == 'inventory' %}on{% endif %}">库存</a>
+    <a href="{% url 'receiving' %}" class="{% if request.resolver_match.url_name == 'receiving' %}on{% endif %}">收货</a>
+    <a href="{% url 'outbound' %}" class="{% if request.resolver_match.url_name == 'outbound' or request.resolver_match.url_name == 'order_detail' %}on{% endif %}">出库</a>
+    <a href="{% url 'history' %}" class="{% if request.resolver_match.url_name == 'history' %}on{% endif %}">历史查询</a>
+  </nav>
+</header>
+<main>
+  {% if messages %}<ul class="msgs">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

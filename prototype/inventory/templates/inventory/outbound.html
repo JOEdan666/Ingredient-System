@@ -1,0 +1,32 @@
+{% extends "inventory/base.html" %}
+{% block title %}出库{% endblock %}
+{% block content %}
+<h1>出库：接单即占用 → 选批次与货位 → 发货</h1>
+<p class="note">接单时立即占用、减少「可用」（D07）；实物要到发货才减少，发货不会再扣一次可用。可用不够时拒绝接单（候选规则，待业务确认是否允许缺货接单）。</p>
+
+<h2>接单</h2>
+<form method="post" action="{% url 'accept_order' %}" class="card">
+  {% include "inventory/_op.html" %}
+  <label>货主 <select name="owner">{% for o in owners %}<option>{{ o.code }}</option>{% endfor %}</select></label>
+  <label>订单号 <input name="number" required placeholder="例如 DEMO-O1"></label>
+  <label>原件（合成） <input name="source_ref" placeholder="例如 SYN-PDF-1 第1页"></label>
+  <table>
+    <tr><th>行</th><th>商品编码</th><th>数量</th><th>指定效期（可空）</th></tr>
+    {% for i in "123" %}<tr><td>{{ i }}</td><td><input name="product_{{ i }}" {% if i == "1" %}required{% endif %}></td>
+      <td><input type="number" name="qty_{{ i }}" min="1"></td><td><input type="date" name="expiry_{{ i }}"></td></tr>{% endfor %}
+  </table>
+  <button>接单并占用</button>
+</form>
+
+<h2>订单</h2>
+<div class="card">
+<table>
+  <tr><th>订单号</th><th>货主</th><th class="num">订购</th><th class="num">未选货位</th><th class="num">已分配未发</th><th class="num">已发</th><th class="num">已取消</th><th>接单</th><th></th></tr>
+  {% for o in orders %}
+  <tr><td>{{ o.number }}</td><td>{{ o.owner }}</td><td class="num">{{ o.ordered }}</td><td class="num">{{ o.unallocated }}</td>
+    <td class="num">{{ o.allocated_open }}</td><td class="num">{{ o.shipped }}</td><td class="num">{{ o.cancelled }}</td>
+    <td>{{ o.created_by }} {{ o.created_at|date:"m-d H:i" }}</td><td><a href="{% url 'order_detail' o.id %}">处理</a></td></tr>
+  {% empty %}<tr><td colspan="9" class="muted">还没有订单。</td></tr>{% endfor %}
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+[project]
+name = "ingredient-system-prototype"
+version = "0.1.0"
+description = "T03 prototype on synthetic data. Simulated persistence (SQLite); does not prove concurrency or locking."
+requires-python = "==3.13.*"
+dependencies = [
+    "django>=5.2,<5.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9,<10",
+    "pytest-django>=4.11,<5",
+]
+
+[tool.uv]
+package = false

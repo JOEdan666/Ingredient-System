@@ -55,7 +55,7 @@
     {
       "id": "T03",
       "title": "合成数据下的四屏流程原型",
-      "status": "in_progress",
+      "status": "review",
       "owner": "claude-cloud",
       "depends_on": [
         "T01",
@@ -73,7 +73,11 @@
         "docs/prototype.md"
       ],
       "deliverable": "库存、收货、出库、历史查询原型，标明模拟持久化；相关运行命令和截图",
-      "evidence": []
+      "evidence": [
+        "docs/prototype.md §6 (pytest 42 passed on SQLite, macOS rerun after review fixes; simulated persistence, no concurrency proof)",
+        "docs/screenshots/t03-*.png (synthetic data)",
+        "PR #6 reviews: Claude reviewer routine comment 5872276215; Codex review (local)"
+      ]
     },
     {
       "id": "T04",

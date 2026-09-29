@@ -1,0 +1,58 @@
+{% extends "inventory/base.html" %}
+{% block title %}订单 {{ order.number }}{% endblock %}
+{% block content %}
+<h1>订单 {{ order.number }} <span class="muted">{{ order.owner }} · 原件 {{ order.source_ref|default:"—" }} · 接单 {{ order.created_by }} {{ order.created_at|date:"Y-m-d H:i" }}</span></h1>
+<p><a href="{% url 'outbound' %}">← 返回订单列表</a> · <a href="{% url 'history' %}?number={{ order.number|urlencode }}">查看历史</a></p>
+
+{% for l in order.lines %}
+<div class="card">
+  <strong>第 {{ l.line_no }} 行 · 商品 {{ l.product }}</strong> {% if l.requested_expiry %}<span class="tag">指定效期 {{ l.requested_expiry|date:"Y-m-d" }}</span>{% endif %}
+  <table>
+    <tr><th class="num">订购</th><th class="num">未选货位</th><th class="num">已分配未发</th><th class="num">已发</th><th class="num">已取消</th></tr>
+    <tr><td class="num">{{ l.numbers.ordered }}</td><td class="num">{{ l.numbers.unallocated }}</td><td class="num">{{ l.numbers.allocated_open }}</td>
+      <td class="num">{{ l.numbers.shipped }}</td><td class="num">{{ l.numbers.cancelled }}</td></tr>
+  </table>
+
+  {% if l.numbers.unallocated %}
+  <h2>员工选批次与货位（本行还需分配 {{ l.numbers.unallocated }}）</h2>
+  <form method="post" action="{% url 'allocate' order.id %}">{% include "inventory/_op.html" %}
+    <input type="hidden" name="line_id" value="{{ l.id }}">
+    <table>
+      <tr><th>批次</th><th>批号</th><th>效期</th><th>货位</th><th class="num">可分配</th><th>本次分配</th></tr>
+      {% for c in l.candidates %}
+      <tr><td>{{ c.lot }}</td><td>{{ c.external_lot }}</td><td>{{ c.expiry|date:"Y-m-d"|default:"未知" }}</td>
+        <td>{{ c.location }} <span class="muted">{{ c.location_kind }}</span></td><td class="num">{{ c.free }}</td>
+        <td><input type="number" name="pick_{{ c.id }}" min="0" max="{{ c.free }}"></td></tr>
+      {% empty %}<tr><td colspan="6" class="muted">没有符合条件的合格库存（同货主、同商品{% if l.requested_expiry %}、同效期{% endif %}）。</td></tr>{% endfor %}
+    </table>
+    <button>保存分配</button> <span class="muted">系统不自动按效期先出（FEFO），由员工决定。</span>
+  </form>
+  {% endif %}
+
+  {% if l.allocations %}
+  <h2>已分配</h2>
+  <form method="post" action="{% url 'ship' order.id %}">{% include "inventory/_op.html" %}
+    <table>
+      <tr><th>批次</th><th>效期</th><th>货位</th><th class="num">分配</th><th class="num">已发</th><th class="num">已释放</th><th class="num">未发</th><th>分配人</th><th>本次发货</th></tr>
+      {% for a in l.allocations %}
+      <tr><td>{{ a.lot }}</td><td>{{ a.expiry|date:"Y-m-d"|default:"未知" }}</td><td>{{ a.location }}</td><td class="num">{{ a.allocated }}</td>
+        <td class="num">{{ a.shipped }}</td><td class="num">{{ a.released }}</td><td class="num">{{ a.open }}</td><td>{{ a.by }}</td>
+        <td>{% if a.open %}<input type="number" name="ship_{{ a.id }}" min="0" max="{{ a.open }}" value="{{ a.open }}">{% endif %}</td></tr>
+      {% endfor %}
+    </table>
+    <button>确认发货</button>
+  </form>
+  {% endif %}
+
+  {% if l.numbers.cancellable %}
+  <h2>逐行取消（最多 {{ l.numbers.cancellable }}，已发出的不能取消）</h2>
+  <form method="post" action="{% url 'cancel_line' order.id %}" class="inline">{% include "inventory/_op.html" %}
+    <input type="hidden" name="line_id" value="{{ l.id }}">
+    <input type="number" name="qty" min="1" max="{{ l.numbers.cancellable }}" placeholder="空=全部剩余">
+    <select name="reason">{% for v, t in reasons %}<option value="{{ v }}">{{ t }}</option>{% endfor %}</select>
+    <button class="danger">取消这一行</button>
+  </form>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

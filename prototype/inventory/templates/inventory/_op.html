@@ -1,0 +1,2 @@
+{% csrf_token %}<input type="hidden" name="operation_id" value="{{ new_op }}">
+<select name="actor" title="操作人（合成）">{% for a in actors %}<option>{{ a }}</option>{% endfor %}</select>
