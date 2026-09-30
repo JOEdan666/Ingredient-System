@@ -12,18 +12,18 @@ from django.views.decorators.http import require_POST
 
 from . import domain, queries
 from .domain import DomainError
-from . import import_posting, pallet_sheets
+from . import import_posting, pallet_sheets, staff
 from .import_preview import PreviewError, parse_upload, problem_summary, recheck
-from .models import Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet
+from .models import Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet, Staff
 from .synthetic import load_synthetic_fixture
 
-SYNTHETIC_ACTORS = ["员工甲（合成）", "员工乙（合成）", "员工丙（合成）"]
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 
 
 def _ctx(request, **extra):
     return {
-        "actors": SYNTHETIC_ACTORS,
+        "actors": staff.actor_choices(),
+        "real_staff": staff.real_mode(),
         "owners": Owner.objects.order_by("code"),
         "locations": Location.objects.filter(active=True).order_by("code"),
         "conditions": Condition.choices,
@@ -51,7 +51,8 @@ def _line_in_order(order_id, raw_line_id):
 def _submit(request, label, fn, **kwargs):
     """Run one domain command from a form and report the outcome."""
     try:
-        res = fn(operation_id=request.POST.get("operation_id", ""), actor=request.POST.get("actor", ""), **kwargs)
+        res = fn(operation_id=request.POST.get("operation_id", ""),
+                 actor=staff.check_actor(request.POST.get("actor", "")), **kwargs)
     except DomainError as err:
         messages.error(request, f"{label}被拒绝：{err.message}")
         return None
@@ -153,7 +154,7 @@ def import_units(request, batch_id):
             per_case = int(raw) if raw.isdigit() else None
             choices[line["row"]] = (unit, per_case)
     try:
-        done = import_posting.confirm_units(batch, choices, request.POST.get("actor", ""))
+        done = import_posting.confirm_units(batch, choices, staff.check_actor(request.POST.get("actor", "")))
     except DomainError as err:
         messages.error(request, f"单位确认被拒绝：{err.message}")
     else:
@@ -176,7 +177,7 @@ def import_post(request, batch_id):
             return redirect("import_detail", batch_id=batch_id)
     try:
         result = import_posting.post_batch(
-            batch_id, request.POST.get("actor", ""), snapshot_at=snapshot_at,
+            batch_id, staff.check_actor(request.POST.get("actor", "")), snapshot_at=snapshot_at,
             export_basis=request.POST.get("export_basis", ""),
             confirm_not_in_snapshot=request.POST.get("confirm_not_in_snapshot") == "1",
         )
@@ -288,7 +289,7 @@ def pallet_sheet_form(request, order_id):
             sheet = pallet_sheets.create_sheet(
                 order_ids=request.POST.getlist("orders"), ship_to=request.POST.get("ship_to"),
                 address=request.POST.get("address"), delivery_time=request.POST.get("delivery_time"),
-                pallet_count=request.POST.get("pallet_count"), actor=request.POST.get("actor", ""),
+                pallet_count=request.POST.get("pallet_count"), actor=staff.check_actor(request.POST.get("actor", "")),
             )
         except (DomainError, ValueError) as err:
             messages.error(request, f"板头纸没有生成：{getattr(err, 'message', err)}")
@@ -377,3 +378,21 @@ def history_page(request):
     return render(request, "inventory/history.html", _ctx(
         request, number=number, results=queries.order_history(number) if number else None,
     ))
+
+
+# 员工名单 -----------------------------------------------------------------
+
+def staff_page(request):
+    """Add or deactivate the named operators shown in every 操作人 drop-down."""
+    if request.method == "POST":
+        try:
+            if request.POST.get("action") == "add":
+                person = staff.add_staff(request.POST.get("name", ""))
+                messages.success(request, f"已添加「{person.name}」。")
+            else:
+                person = staff.set_active(int(request.POST.get("staff_id", "0")), request.POST.get("action") == "activate")
+                messages.success(request, f"已{'恢复' if person.active else '停用'}「{person.name}」。")
+        except (DomainError, ValueError) as err:
+            messages.error(request, f"没有改成：{getattr(err, 'message', err)}")
+        return redirect("staff")
+    return render(request, "inventory/staff.html", _ctx(request, people=Staff.objects.order_by("-active", "name")))
