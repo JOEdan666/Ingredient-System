@@ -216,7 +216,7 @@
     {
       "id": "T09",
       "title": "合并前自动测试：GitHub Actions 跑 prototype 与 import-spike 的 pytest",
-      "status": "review",
+      "status": "done",
       "owner": "claude-routine",
       "depends_on": [
         "T03",
@@ -238,7 +238,8 @@
         "本地验证 0 条测试时 pytest 退出码为 5（对空目录跑 uv run --frozen pytest -ra /tmp/empty_test_dir）",
         "python scripts/check_project.py: PASS (12 tasks, 14 acceptance)",
         "git diff --check origin/main...HEAD: 无输出",
-        "未运行验证：真实 GitHub Actions 环境下本工作流的实际执行结果（含 astral-sh/setup-uv 固定 SHA 的下载与 uv 0.12.20 的安装），由草稿 PR 的 checks 标签验证"
+        "未运行验证：真实 GitHub Actions 环境下本工作流的实际执行结果（含 astral-sh/setup-uv 固定 SHA 的下载与 uv 0.12.20 的安装），由草稿 PR 的 checks 标签验证",
+        "2026-10-01: 已由用户合并入 main（PR #10），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
@@ -270,7 +271,7 @@
     {
       "id": "T04c",
       "title": "PDF 送货/装箱单：商品行提取（合成文本样本）",
-      "status": "review",
+      "status": "done",
       "owner": "claude-local (handed off from codex-local, 2026-09-29)",
       "depends_on": [
         "T04b"
@@ -291,13 +292,14 @@
         "2026-09-29: 反例：把配对改成反向、或关掉合计核对，分别有 4 条 / 1 条测试失败；还原后 38 passed。",
         "2026-09-29: 经用户此前授权，本机只读核对两份真实 PDF（pypdf 6.19.0 提取）：9 行与 4 行全部识别、序号连续、单号/日期/Cust# 均找到、无批次错误；9 行件装商品全部通过净重与合计核对；4 行里 3 个整箱商品按规则标 unit_needs_confirmation。只输出计数与错误类别，原件和真实值未进入仓库。",
         "2026-09-29: Codex（gpt-5.6-sol）审查 745f912 提出 3 条：描述里的 EA 顶替未知单位、页码等杂行混入描述、整单被拦时单行仍显示可过账。均本机复现并修复；新增 6 条测试在旧代码上全部失败、修复后通过；两份真实 PDF 结果不变。",
-        "未验收：Q02 其它版式、Q04 CS 商品数量栏 EA 的含义、订单过账（T06）。"
+        "未验收：Q02 其它版式、Q04 CS 商品数量栏 EA 的含义、订单过账（T06）。",
+        "2026-10-01: 已由用户合并入 main（PR #13），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
       "id": "T04e",
       "title": "文件导入：上传 → 核对 → 确认入账（本机原型）",
-      "status": "review",
+      "status": "done",
       "owner": "claude-local (2026-09-30)",
       "depends_on": [
         "T03",
@@ -320,13 +322,14 @@
         "2026-09-30: prototype pytest → 55 passed（新增 tests/test_imports.py 9 条：新手默认路径、重复文件/同货主第二份库存表在确认前与入账时都拒绝、验货纸只生成预告不加库存、PDF 可用不足整单回滚、单位必须人工明确选择并留名、库存表中途失败全部撤销）；import-spike → 44 passed；check_project PASS。",
         "2026-09-30: 反例：去掉重复文件检查、或把 NG 行一律当合格，分别有 1 条 / 2 条测试失败；还原后 55 passed。",
         "2026-09-30: 本机真实文件（仓库外，用户授权）用无头 Chrome 真实点击（drive.mjs）从空库走完：库存表 478 行入账；PDF1 9 行接单占用；验货纸 50 行生成预告；PDF2 人工确认 3 行单位后因其中一个商品可用为 0 整单拒绝（正确）；同一库存表再次上传在确认前即提示拒绝。只记录计数，截图只在本机临时目录。",
-        "未验收：独立验收审查者对最终提交的结论（见 docs/HANDOFF.md）；Q05/Q04/验货纸业务含义；PostgreSQL 上的并发。"
+        "未验收：独立验收审查者对最终提交的结论（见 docs/HANDOFF.md）；Q05/Q04/验货纸业务含义；PostgreSQL 上的并发。",
+        "2026-10-01: 已由用户合并入 main（PR #14），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
       "id": "T04f",
       "title": "板头纸：从订单生成、每板一页、可打印/存 PDF（本机原型）",
-      "status": "review",
+      "status": "done",
       "owner": "claude-local (2026-09-30)",
       "depends_on": [
         "T03"
@@ -342,13 +345,14 @@
       "evidence": [
         "2026-09-30: prototype pytest → 74 passed（新增 tests/test_pallet_sheets.py 13 条：版式与分页、多单「A & B」、8 种非法输入全部拒绝且不存、不同货主不能同板、合并订单号超过 200 字时明确拒绝且不保存、失败保留已填内容、再次打开预填、快照不随订单改名、生成与重印前后库存/占用/流水完全不变）；反例：页数少一页或去掉同货主检查各有 1 条失败。",
         "2026-09-30: 本机用已导入真实文件的演示库副本，无头 Chrome 真实点击「订单 → 打印板头纸 → 填写 → 生成」；导出 PDF 2 页，末行分别为「共2板 (1/2)」「共2板 (2/2)」；库存指纹前后相同。填写内容为虚构示范值。",
-        "2026-09-30: 独立验收审查者对 c1c4c64 给出 PASS：74+44 tests、PDF 2 页、UI 与截图、长订单号超限拒绝、库存指纹不变。仍未验收：Windows 中文文件名/实体打印（A12，归 T07）；专用标签纸与打印机。"
+        "2026-09-30: 独立验收审查者对 c1c4c64 给出 PASS：74+44 tests、PDF 2 页、UI 与截图、长订单号超限拒绝、库存指纹不变。仍未验收：Windows 中文文件名/实体打印（A12，归 T07）；专用标签纸与打印机。",
+        "2026-10-01: 已由用户合并入 main（PR #15），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
       "id": "T03b",
       "title": "员工名单：操作人改为可配置的真实姓名",
-      "status": "review",
+      "status": "done",
       "owner": "claude-local (2026-09-30)",
       "depends_on": [
         "T03"
@@ -364,13 +368,14 @@
       "evidence": [
         "2026-09-30: prototype pytest → 82 passed（新增 tests/test_staff.py 9 条：演示名与提示横幅切换、空名/超长/带「（合成）」的名字被拒、重名与恢复、最后一位不能停用、真实名单下演示名/空操作人/已停用者提交被拒且不写入、历史保留姓名、导入与板头纸表单同样校验）；反例：去掉名单校验或最后一位保护，3 条测试失败。",
         "2026-09-30: 无头 Chrome 真实点击：空名单页提示 → 添加两位（虚构测试名）→ 收货页下拉只剩这两位；截图已看。",
-        "未验收：独立验收结论；真实员工名单由用户自己录入（不进仓库）；账号登录/权限不在本任务内（PROJECT.md 第一版目标第 7 项）。"
+        "未验收：独立验收结论；真实员工名单由用户自己录入（不进仓库）；账号登录/权限不在本任务内（PROJECT.md 第一版目标第 7 项）。",
+        "2026-10-01: 已由用户合并入 main（PR #16），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
       "id": "T06a",
       "title": "PostgreSQL 版领域层与真实数据库并发测试（技术部分，不含 Q03/Q04 业务规则）",
-      "status": "review",
+      "status": "done",
       "owner": "codex-routine (assigned by user, 2026-09-29)",
       "depends_on": [
         "T03",
@@ -394,13 +399,14 @@
         "application/tests/test_concurrency.py (13 marked PostgreSQL concurrency/failure cases; 13 passed locally on PostgreSQL 14.22)",
         "application/check_concurrency_junit.py (13 executed, 0 failed on local run)",
         ".github/workflows/db-tests.yml (PostgreSQL 18.6 target; Actions runs 36575919504 and 36576125734 succeeded; draft PR #12)",
-        "docs/test-commands.md (exact setup, versions, commands, results, limitations)"
+        "docs/test-commands.md (exact setup, versions, commands, results, limitations)",
+        "2026-10-01: 已由用户合并入 main（PR #12），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
       "id": "T05b",
       "title": "收货：整张预告一次确认实收（可折叠）",
-      "status": "review",
+      "status": "done",
       "owner": "claude-local (2026-09-30)",
       "depends_on": [
         "T03"
@@ -415,13 +421,14 @@
       "deliverable": "按用户 2026-09-30 批准的验收单（第 2 版）：收货页每张预告折叠成一行摘要；展开后每行预填预计数量与效期，实收默认等于预计；与预计一致的行折叠，数量不同/出错的行展开并标红；上方「统一货位」和「收货状态」（默认沿用原页面的收货区与待检），每行可单独改货位；一次确认整张入库，任何一行不对则整张不入库并保留已填内容；实收 0 表示没到货；同一张不能整张再收一次，已收的单可对缺货行补收；手工新建预告折叠到页首。每行仍经 domain.confirm_receipt 入账（一个事务）。",
       "evidence": [
         "2026-09-30: prototype pytest → 91 passed（新增 tests/test_receive_notice.py 8 条，对应验收单 6 条 + 行货位覆盖 + 后行失败整单回滚）；反例：去掉事务或去掉重复收货检查 2 条失败，去掉折叠判断 1 条失败。",
-        "2026-09-30: 本机真实数据演示库（导入库存表 + 验货纸 50 行）无头 Chrome 操作：改 1 行少 10、1 行 0 → 49 行入库 12412 件（12862−10−440），库存 79161→91573，流水 +49；故意填错 1 行 → 整张不入库、库存不变、出错行标红在上、其余 48 行折叠、已填数字保留。截图已看。"
+        "2026-09-30: 本机真实数据演示库（导入库存表 + 验货纸 50 行）无头 Chrome 操作：改 1 行少 10、1 行 0 → 49 行入库 12412 件（12862−10−440），库存 79161→91573，流水 +49；故意填错 1 行 → 整张不入库、库存不变、出错行标红在上、其余 48 行折叠、已填数字保留。截图已看。",
+        "2026-10-01: 已由用户合并入 main（PR #17），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
       "id": "T03c",
       "title": "库存页：按品牌文件夹收起、商品明细整行展开、搜索",
-      "status": "review",
+      "status": "done",
       "owner": "claude-local (2026-09-30)",
       "depends_on": [
         "T03"
@@ -437,13 +444,14 @@
       "evidence": [
         "2026-09-30: prototype pytest → 102 passed（新增 tests/test_inventory_folders.py 11 条；旧页面测试只换了匹配的标记，断言意图不变）；反例：去掉小品牌合并或去掉搜索过滤各有 1 条失败。",
         "2026-09-30: 本机真实数据演示库 258 种商品：16 个文件夹全部收起时页面约 2000px；展开 120 种的 ADVANCE 与一个商品明细；搜「猫粮」找到 54 种、6 个文件夹自动打开；「展开全部」时页面约 65000px 但右侧无溢出。截图已看（含展开状态）。",
-        "2026-09-30: 用户在本机真实数据演示（127.0.0.1:8792）看过后回复「行」（work-rhythm 第 5 步通过）。状态保持 review，合并后再标 done。"
+        "2026-09-30: 用户在本机真实数据演示（127.0.0.1:8792）看过后回复「行」（work-rhythm 第 5 步通过）。状态保持 review，合并后再标 done。",
+        "2026-10-01: 已由用户合并入 main（PR #18），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
       "id": "T06b",
       "title": "出库：整张订单一次选批次与货位（可折叠）",
-      "status": "review",
+      "status": "done",
       "owner": "claude-local (2026-09-30)",
       "depends_on": [
         "T03"
@@ -459,7 +467,8 @@
       "evidence": [
         "2026-09-30: prototype pytest → 98 passed（新增 tests/test_allocate_order.py 6 条；旧页面测试按新表单格式改了字段名，意图不变：全流程、他单行被拒、坏输入不 500）；反例：去掉事务或放宽先填规则，3 条失败。",
         "2026-09-30: 本机真实数据：导入真实 PDF 订单 9 行，8 行因「指定效期只有一处库存」被先填好并折叠，1 行有两批同效期可选→留给员工；一次保存 8 行 27 件，提示还有 1 行没配够；全部展开右侧无溢出，各行卡片默认收起后页面约 1500px。截图已看。",
-        "2026-09-30: Codex（gpt-5.6-luna）只审改动：1 条——表单编号被截到 64 字后，过长的编号会让两行得到同一个操作号，第二行被当成重复。本机复核属实（正常表单 32 字不触发）；改为按行拼好后超长就整张拒绝、绝不截断；新增测试，恢复截断即失败。prototype 99 passed。"
+        "2026-09-30: Codex（gpt-5.6-luna）只审改动：1 条——表单编号被截到 64 字后，过长的编号会让两行得到同一个操作号，第二行被当成重复。本机复核属实（正常表单 32 字不触发）；改为按行拼好后超长就整张拒绝、绝不截断；新增测试，恢复截断即失败。prototype 99 passed。",
+        "2026-10-01: 已由用户合并入 main（PR #19），据此标为 done；任务里写明的未验收项（如 Windows、业务问题）仍按原文保留，不因合并而视为通过。"
       ]
     },
     {
