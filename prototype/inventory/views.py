@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 
 from . import domain, queries
 from .domain import DomainError
-from . import import_posting, pallet_sheets, staff
+from . import import_posting, pallet_sheets, receiving_batch, staff
 from .import_preview import PreviewError, parse_upload, problem_summary, recheck
 from .models import Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet, Staff
 from .synthetic import load_synthetic_fixture
@@ -200,10 +200,56 @@ def reset_empty(request):
 
 # 收货 ---------------------------------------------------------------------
 
-def receiving_page(request):
+def receiving_page(request, *, open_notice=None, posted=None, errors=None, status=200):
+    locations = [l.code for l in Location.objects.filter(active=True).order_by("code")]
+    notices = queries.notices()
+    posted, errors = posted or {}, errors or {}
+    for n in notices:
+        mine = n["id"] == open_notice
+        n["open"] = mine
+        n["attention"], n["normal"] = [], []
+        for l in n["lines"]:
+            get = (lambda f, d, lid=l["id"]: posted.get(f"{f}_{lid}", d)) if mine else (lambda f, d, lid=None: d)
+            l["f_qty"] = get("qty", str(l["qty_expected"]))
+            l["f_loc"] = get("loc", "")
+            l["f_expiry"] = get("expiry", l["expiry"].isoformat() if l["expiry"] else "")
+            l["f_lot"] = get("lot", l["external_lot"])
+            l["error"] = errors.get(l["id"], "")
+            l["f_diff"] = int(l["f_qty"]) - l["qty_expected"] if l["f_qty"].strip().isdigit() else None
+            ok = not l["error"] and l["f_diff"] == 0 and not l["f_loc"]
+            (n["normal"] if ok else n["attention"]).append(l)
+        n["f_default_location"] = posted.get("default_location") if mine and posted else None
     return render(request, "inventory/receiving.html", _ctx(
-        request, notices=queries.notices(), pending=queries.pending_inspection(),
-    ))
+        request, notices=notices, pending=queries.pending_inspection(),
+        open_notice=open_notice, posted=posted or {}, row_errors=errors or {},
+        default_location="RECEIVING" if "RECEIVING" in locations else (locations[0] if locations else ""),
+    ), status=status)
+
+
+@require_POST
+def receive_notice(request, notice_id):
+    """Whole-notice receipt: every line checked first; one confirmation posts them all or none."""
+    rows = {}
+    for key, value in request.POST.items():
+        field, _, line_id = key.rpartition("_")
+        if field in ("qty", "loc", "expiry", "lot") and line_id.isdigit():
+            rows.setdefault(int(line_id), {})[{"loc": "location"}.get(field, field)] = value
+    try:
+        result = receiving_batch.receive_notice(
+            notice_id=notice_id, actor=staff.check_actor(request.POST.get("actor", "")),
+            default_location=request.POST.get("default_location", ""),
+            condition=request.POST.get("condition", ""), rows=rows)
+    except receiving_batch.LineErrors as err:
+        messages.error(request, f"整张单没有入库：{err.message}")
+        return receiving_page(request, open_notice=notice_id, posted=request.POST, errors=err.errors, status=400)
+    except DomainError as err:
+        messages.error(request, f"整张单没有入库：{err.message}")
+        return receiving_page(request, open_notice=notice_id, posted=request.POST, status=400)
+    msg = f"整张单已入库：{result['lines']} 行，共 {result['qty']} 件。"
+    if result["skipped"]:
+        msg += f"另有 {result['skipped']} 行实收为 0（没到货），未入库。"
+    messages.success(request, msg)
+    return redirect("receiving")
 
 
 @require_POST

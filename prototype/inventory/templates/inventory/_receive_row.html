@@ -1,0 +1,9 @@
+<tr class="rrow{% if row.error %} err{% elif row.f_diff %} diff{% endif %}" data-expected="{{ row.qty_expected }}">
+  <td>{{ row.line_no }}</td><td>{{ row.product }}</td><td class="num">{{ row.qty_expected }}</td>
+  <td><input type="number" min="0" name="qty_{{ row.id }}" value="{{ row.f_qty }}" class="qty" oninput="rcvDiff(this)"></td>
+  <td class="num delta">{% if row.f_diff %}{% if row.f_diff < 0 %}少 {{ row.f_diff|stringformat:"d"|slice:"1:" }}{% else %}多 {{ row.f_diff }}{% endif %}{% endif %}</td>
+  <td><input type="date" name="expiry_{{ row.id }}" value="{{ row.f_expiry }}"></td>
+  <td><input name="lot_{{ row.id }}" value="{{ row.f_lot }}" placeholder="批号" size="8"></td>
+  <td><select name="loc_{{ row.id }}"><option value="">用统一货位</option>{% for loc in locations %}<option {% if loc.code == row.f_loc %}selected{% endif %}>{{ loc.code }}</option>{% endfor %}</select></td>
+  <td class="rowerr">{{ row.error }}</td>
+</tr>
