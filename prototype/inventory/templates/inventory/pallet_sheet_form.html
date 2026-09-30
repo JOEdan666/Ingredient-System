@@ -1,0 +1,40 @@
+{% extends "inventory/base.html" %}
+{% block title %}板头纸 · {{ order.number }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">PALLET SHEET</div>
+    <h1>打印板头纸</h1>
+    <p>填好送货信息和板数，系统按每板一页生成，可以直接打印或存成 PDF。<b>只生成标签，不改库存。</b></p>
+  </div>
+  <a href="{% url 'order_detail' order.pk %}">← 返回订单 {{ order.number }}</a>
+</div>
+
+<form method="post" class="card pallet-form">
+  {% csrf_token %}
+  <div class="grid">
+    <label>收貨客戶
+      <input name="ship_to" value="{{ form.ship_to }}" list="ship-to-list" maxlength="100" required placeholder="收货的客户名称">
+      <datalist id="ship-to-list">{% for v in suggest.ship_to %}<option value="{{ v }}">{% endfor %}</datalist>
+    </label>
+    <label>送貨時間
+      <input name="delivery_time" value="{{ form.delivery_time }}" list="time-list" maxlength="60" required placeholder="例如：下午3時前">
+      <datalist id="time-list">{% for v in suggest.delivery_time %}<option value="{{ v }}">{% endfor %}</datalist>
+    </label>
+    <label>板數
+      <input name="pallet_count" type="number" min="1" max="{{ max_pallets }}" value="{{ form.pallet_count }}" required>
+    </label>
+  </div>
+  <label class="wide">送貨地址
+    <input name="address" value="{{ form.address }}" list="address-list" maxlength="200" required placeholder="完整送货地址">
+    <datalist id="address-list">{% for v in suggest.address %}<option value="{{ v }}">{% endfor %}</datalist>
+  </label>
+  <div class="orders-pick">
+    <span class="muted">訂單編號（同一板上有几张单就勾几张，打印成「A &amp; B」）</span>
+    {% for o in same_owner_orders %}
+      <label class="check"><input type="checkbox" name="orders" value="{{ o.pk }}" {% if o.pk in form.orders %}checked{% endif %}> {{ o.number }}</label>
+    {% endfor %}
+  </div>
+  <div class="filter-actions">{% include "inventory/_op.html" %}<button type="submit">生成板头纸</button></div>
+</form>
+{% endblock %}

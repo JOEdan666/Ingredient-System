@@ -4,6 +4,12 @@
 <h1>订单 {{ order.number }} <span class="muted">{{ order.owner }} · 原件 {{ order.source_ref|default:"—" }} · 接单 {{ order.created_by }} {{ order.created_at|date:"Y-m-d H:i" }}</span></h1>
 <p><a href="{% url 'outbound' %}">← 返回订单列表</a> · <a href="{% url 'history' %}?number={{ order.number|urlencode }}">查看历史</a></p>
 
+<div class="card">
+  <strong>板头纸</strong> <a href="{% url 'pallet_sheet_form' order.id %}"><button type="button">打印板头纸</button></a>
+  <span class="muted">每板一页，只是标签，不改库存。</span>
+  {% if sheets %}<ul class="sheet-list">{% for s in sheets %}<li><a href="{% url 'pallet_sheet_print' s.pk %}">{{ s.created_at|date:"Y-m-d H:i" }} · {{ s.ship_to }} · 共{{ s.pallet_count }}板 · {{ s.order_numbers }}</a> <span class="muted">{{ s.created_by }}</span></li>{% endfor %}</ul>{% endif %}
+</div>
+
 {% for l in order.lines %}
 <div class="card">
   <strong>第 {{ l.line_no }} 行 · 商品 {{ l.product }}</strong>{% if l.source_line %} <span class="muted">原件{{ l.source_line }}</span>{% endif %} {% if l.requested_expiry %}<span class="tag">指定效期 {{ l.requested_expiry|date:"Y-m-d" }}</span>{% endif %}

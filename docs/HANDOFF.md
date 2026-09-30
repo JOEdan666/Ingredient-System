@@ -1,5 +1,14 @@
 # 当前交接
 
+## 2026-09-30 Claude Code 本机：T04f 板头纸生成
+
+- Task/owner/branch：T04f，owner `claude-local`；分支 `agent/claude/T04f-pallet-sheet`（基于 `main` `9149af3`，PR #14 已合并）。
+- 判断：PROJECT.md 第一版目标第 6 项写明板头纸是「保留数据、模板预览/导出」，桌面 Word 是**员工现在手打的标签样本**，不是要导入的单据；所以做成从订单生成，而不是导入解析。
+- 改动：`PalletSheet` 表（迁移 0003，存填写时的快照）；`inventory/pallet_sheets.py`；订单页「打印板头纸」→ 填写页 → 打印页（按样本版式每板一页，浏览器打印/存 PDF）；订单页列出历次板头纸可重印。不读写任何库存表。
+- 实测：见 `docs/tasks.json` T04f evidence（73 passed、反例、真实数据演示库上点击生成并导出 PDF 2 页、库存指纹不变）。
+- 待问清单（不阻塞）：板头纸是否要印商品/箱数明细；专用标签纸尺寸（现按 A4）。
+- 下一动作：跑 `scripts/run_acceptance_review.sh`，无论结论都推送开 draft PR（用户 2026-09-30 规则），PR 里写明结论。
+
 ## 2026-09-30 Claude Code 本机：T04e 文件真正可导入 + 独立验收闸门
 
 - Task/owner/branch：T04e，owner `claude-local`；分支 `agent/claude/T04e-import-posting`（从 `agent/codex/T03-ui-rework` 的 `f289917` 接着做，独立 worktree `~/work/Ingredient-System-import`）。
