@@ -70,6 +70,13 @@
   details.notice > summary { font-size:14px; padding:4px 0; } details.fold { margin:10px 0; } details.fold > summary { color:var(--muted); }
   tr.diff td { background:#fdf0ef; } tr.diff .delta { color:var(--bad); font-weight:700; } tr.err td { background:#fbe3e1; } td.rowerr { color:var(--bad); font-weight:600; white-space:normal; }
   .receive-form input.qty { width:90px; } table.rtable { table-layout:fixed; } table.rtable td, table.rtable th { overflow:hidden; } table.rtable input, table.rtable select { max-width:100%; }
+  .search { display:flex; gap:8px; align-items:center; } .search input { flex:1; max-width:520px; }
+  details.folder > summary { display:flex; gap:18px; align-items:baseline; font-size:15px; cursor:pointer; }
+  details.folder > summary .fname { font-weight:750; min-width:180px; } details.folder > summary .fsum { margin-left:auto; }
+  details.folder[open] > summary { margin-bottom:8px; }
+  details.prod { border-top:1px solid #e9efec; } details.prod > summary { display:grid; grid-template-columns: 110px 1fr 220px; gap:12px; padding:9px 4px; align-items:center; }
+  details.prod > summary:hover { background:#fafcfb; } .pavail { text-align:right; } .pavail b { font-size:18px; color:#174e42; }
+  .pdetail { padding:4px 8px 14px 24px; background:#fafcfb; } .pdetail .calc { margin:6px 0 0; }
   .facts { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
   .facts > div { min-width:0; overflow-wrap:anywhere; }
   .cutover label { display:block; margin:8px 0; } .cutover label.check { display:inline-flex; margin-right:16px; } .cutover input[type=datetime-local] { margin-left:8px; }

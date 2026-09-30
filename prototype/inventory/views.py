@@ -12,7 +12,7 @@ from django.views.decorators.http import require_POST
 
 from . import domain, queries
 from .domain import DomainError
-from . import import_posting, pallet_sheets, receiving_batch, staff
+from . import folders, import_posting, pallet_sheets, receiving_batch, staff
 from .import_preview import PreviewError, parse_upload, problem_summary, recheck
 from .models import Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet, Staff
 from .synthetic import load_synthetic_fixture
@@ -68,10 +68,14 @@ def _submit(request, label, fn, **kwargs):
 def inventory_page(request):
     f = {k: request.GET.get(k, "").strip() for k in ("owner", "product", "lot", "expiry", "location", "condition")}
     show_zero = request.GET.get("show_zero") == "1"
+    q = request.GET.get("q", "").strip()
+    summaries = queries.product_summaries(owner=f["owner"], product=f["product"])
+    balances = queries.balance_rows(show_zero=show_zero, **f)
+    folder_list = folders.build(summaries, queries.balance_rows(owner=f["owner"], product=f["product"]), q)
     return render(request, "inventory/inventory.html", _ctx(
-        request, f=f, show_zero=show_zero, expand=request.GET.get("expand") == "1",
-        summaries=queries.product_summaries(owner=f["owner"], product=f["product"]),
-        balances=queries.balance_rows(show_zero=show_zero, **f),
+        request, f=f, q=q, show_zero=show_zero, expand=request.GET.get("expand") == "1",
+        folders=folder_list, product_total=len(summaries), folder_hits=sum(x["count"] for x in folder_list),
+        balances=balances, filtering=any(f.values()) or show_zero,
     ))
 
 
