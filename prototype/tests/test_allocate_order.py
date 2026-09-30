@@ -89,3 +89,12 @@ def test_same_form_submitted_twice_is_not_applied_twice(client, world):
     post(client, order, {(line.pk, a.pk): 3}, op="op-dup")
     post(client, order, {(line.pk, a.pk): 3}, op="op-dup")
     assert Allocation.objects.count() == 1 and StockBalance.objects.get(pk=a.pk).allocated == 3
+
+
+def test_overlong_form_id_is_refused_not_truncated_into_a_shared_id(client, world):
+    a = world.opening(10, location="A-01", expiry=EXP_1)
+    order = accept([(3, None), (4, None)])
+    l1, l2 = order.lines.order_by("line_no")
+    resp = post(client, order, {(l1.pk, a.pk): 3, (l2.pk, a.pk): 4}, op="x" * 62)
+    assert resp.status_code == 400 and "表单编号无效" in resp.content.decode()
+    assert Allocation.objects.count() == 0

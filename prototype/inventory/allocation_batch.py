@@ -16,6 +16,8 @@ from .domain import DomainError
 from .models import Order
 from .receiving_batch import LineErrors
 
+MAX_OPERATION_ID = 64  # Operation.operation_id max_length
+
 
 def prefill(line: dict) -> dict[int, int]:
     """Suggest quantities only when there is no real choice to make.
@@ -42,6 +44,8 @@ def _qty(raw) -> int:
 
 def allocate_order(*, order_id: int, actor: str, operation_id: str, entries: dict) -> dict:
     """entries: {line_id: {balance_id: raw_qty}} from the form."""
+    if not operation_id:
+        raise DomainError("bad_operation_id", "表单编号无效，请刷新页面后重新填写。")
     order = Order.objects.filter(pk=order_id).first()
     if order is None:
         raise DomainError("unknown_order", "订单不存在。")
@@ -66,12 +70,16 @@ def allocate_order(*, order_id: int, actor: str, operation_id: str, entries: dic
             plan.append((line, parsed))
     if errors:
         raise LineErrors(errors)
+    # Each line gets "<form id>-l<line id>". Never truncate: a cut id could equal another
+    # line's id and that line would be treated as a repeat. Too long -> refuse everything.
+    if any(len(f"{operation_id}-l{line.pk}") > MAX_OPERATION_ID for line, _ in plan):
+        raise DomainError("bad_operation_id", "表单编号无效，请刷新页面后重新填写。")
     if not plan:
         raise DomainError("nothing_allocated", "一个数量都没填，没有东西可以保存。")
     with transaction.atomic():
         for line, parsed in plan:
             try:
-                domain.allocate_line(operation_id=f"{operation_id}-l{line.pk}"[:64], actor=actor,
+                domain.allocate_line(operation_id=f"{operation_id}-l{line.pk}", actor=actor,
                                      line_id=line.pk, picks=parsed)
             except DomainError as err:
                 raise LineErrors({line.pk: err.message})  # undoes lines already saved
