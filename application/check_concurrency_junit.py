@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import xml.etree.ElementTree as ET
 
-EXPECTED = 13
+EXPECTED = 15
 
 
 def main(path):

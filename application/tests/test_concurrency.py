@@ -15,9 +15,13 @@ from .conftest import ACTOR, new_op
 pytestmark = pytest.mark.concurrency
 
 
-def _worker(call, callback=None, *, no_lock=False):
+def _worker(call, callback=None, *, no_lock=False, no_balance_lock=False):
     try:
-        with domain.test_probe(callback or (lambda point: None), without_availability_lock=no_lock):
+        with domain.test_probe(
+            callback or (lambda point: None),
+            without_availability_lock=no_lock,
+            without_balance_lock=no_balance_lock,
+        ):
             with connection.cursor() as cursor:
                 cursor.execute("SELECT pg_backend_pid()")
                 pid = cursor.fetchone()[0]
@@ -211,6 +215,76 @@ def test_move_failure_after_out_movement_rolls_back(world, monkeypatch):
                           qty=2, to_location_code="B-01")
     assert StockMovement.objects.count() == before
     assert StockBalance.objects.get(pk=balance.pk).on_hand == 5
+
+
+@override_settings(INVENTORY_TEST_HOOKS=True)
+def _competing_moves(world, *, no_balance_lock=False):
+    source = world.opening(10, location="A-01")
+    held = Event()
+    release = Event()
+    b_at_lock = Event()
+    b_read = Event()
+    b_pid = []
+
+    def a_probe(point):
+        if point == "after_balance_read":
+            held.set()
+            if not release.wait(8):
+                raise AssertionError("A was not released")
+
+    def b_probe(point):
+        if point == "before_balance_lock":
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT pg_backend_pid()")
+                b_pid.append(cursor.fetchone()[0])
+            b_at_lock.set()
+        elif point == "after_balance_read":
+            b_read.set()
+            if no_balance_lock:
+                raise DetectedMissingLock()
+
+    def move(destination):
+        return domain.move_stock(
+            operation_id=new_op(), actor=ACTOR, balance_id=source.pk,
+            qty=6, to_location_code=destination,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        a = pool.submit(_worker, lambda: move("B-01"), a_probe)
+        assert held.wait(5), "A never reached the locked balance read"
+        b = pool.submit(
+            _worker, lambda: move("C-01"), b_probe,
+            no_balance_lock=no_balance_lock,
+        )
+        try:
+            assert b_at_lock.wait(5), "B never reached the balance lock point"
+            if no_balance_lock:
+                assert b_read.wait(5), "unlocked B did not pass the balance read"
+            else:
+                assert not b_read.wait(0.1), "B read the source balance before A committed"
+                assert _wait_for_lock(b_pid[0]), "PostgreSQL did not report B waiting on the balance lock"
+                assert not b.done(), "B returned before A committed"
+        finally:
+            release.set()
+        result_a, result_b = a.result(timeout=8), b.result(timeout=8)
+    return source, result_a, result_b, b_read.is_set()
+
+
+def test_competing_moves_share_source_balance_lock(world):
+    source, (_, a, err_a), (_, b, err_b), read = _competing_moves(world)
+    assert a is not None and err_a is None
+    assert b is None and isinstance(err_b, DomainError) and err_b.code == "insufficient_free"
+    assert read
+    assert StockBalance.objects.get(pk=source.pk).on_hand == 4
+    assert domain.check_invariants() == []
+
+
+def test_missing_balance_for_update_counterexample_is_detected(world):
+    source, (_, a, err_a), (_, b, err_b), read = _competing_moves(world, no_balance_lock=True)
+    assert read and a is not None and err_a is None
+    assert b is None and isinstance(err_b, DetectedMissingLock)
+    assert StockBalance.objects.get(pk=source.pk).on_hand == 4
+    assert domain.check_invariants() == []
 
 
 def test_duplicate_cancel_releases_once(world):

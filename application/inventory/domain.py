@@ -77,19 +77,22 @@ class CommandResult:
 
 _test_callback = ContextVar("inventory_test_callback", default=None)
 _test_no_availability_lock = ContextVar("inventory_test_no_availability_lock", default=False)
+_test_no_balance_lock = ContextVar("inventory_test_no_balance_lock", default=False)
 
 
 @contextmanager
-def test_probe(callback, *, without_availability_lock=False):
+def test_probe(callback, *, without_availability_lock=False, without_balance_lock=False):
     """Test-only scheduling probe; never enabled by application settings."""
     if not settings.INVENTORY_TEST_HOOKS:
         raise RuntimeError("Inventory test probes are disabled")
     token = _test_callback.set(callback)
-    lock_token = _test_no_availability_lock.set(without_availability_lock)
+    availability_token = _test_no_availability_lock.set(without_availability_lock)
+    balance_token = _test_no_balance_lock.set(without_balance_lock)
     try:
         yield
     finally:
-        _test_no_availability_lock.reset(lock_token)
+        _test_no_balance_lock.reset(balance_token)
+        _test_no_availability_lock.reset(availability_token)
         _test_callback.reset(token)
 
 
@@ -174,12 +177,17 @@ def _lock_availability(product_ids) -> dict[int, ProductAvailability]:
 
 def _lock_balances(balance_ids) -> dict[int, StockBalance]:
     ids = sorted(set(balance_ids))
-    rows = list(
-        StockBalance.objects.select_for_update()
+    _probe("before_balance_lock")
+    rows_query = (
+        StockBalance.objects
         .select_related("lot", "location", "owner", "product")
         .filter(pk__in=ids)
         .order_by("pk")
     )
+    if not (settings.INVENTORY_TEST_HOOKS and _test_no_balance_lock.get()):
+        rows_query = rows_query.select_for_update()
+    rows = list(rows_query)
+    _probe("after_balance_read")
     if len(rows) != len(ids):
         raise DomainError("balance_missing", "库存记录不存在。")
     return {r.pk: r for r in rows}

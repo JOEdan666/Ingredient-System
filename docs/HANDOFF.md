@@ -1,5 +1,17 @@
 # 当前交接
 
+## 2026-09-30 Codex 定时例程：T06a 合并后审查叫停修复
+
+- Task/owner/branch：T06a，owner `codex-routine`；分支 `agent/codex/T06a-integration-status`，基准 `origin/main` `9149af3`。PR #12 已于 2026-09-29 合并，但其最终 head `e8af4bf` 的独立审查结论是 `CHANGES_REQUESTED`，不能因已合并或 CI 绿色把任务标为完成。
+
+### 审查叫停回应
+
+1. 高「13 条并发测试没有覆盖两个 `move_stock` 同时争用同一个来源余额；删掉 `_lock_balances()` 的 `select_for_update()` 后全部测试仍通过」——**接受并修**。补充同一来源余额并发移往两个不同货位的锁等待/余量拒绝场景，并增加显式禁用余额行锁的反例；同步提高 JUnit 最少并发用例数。修复后须在 PostgreSQL 上重跑完整领域测试、并发子集和计数器，再交独立验收审查者复核最终提交。
+
+- 实测（本机 PostgreSQL 14.22，合成数据）：`application` 全集 **45 passed**；并发子集 **15 passed, 30 deselected**；JUnit 校验 `executed=15, expected>=15, failed=0`。临时去掉余额 `select_for_update()` 后，新测试按预期失败，并检测到 `on_hand 4 ≠ 流水合计 -2`；恢复锁后重新全绿。额外回归：`prototype` **61 passed**、`import-spike` **44 passed**、`scripts/check_project.py` PASS、`git diff --check` 无输出。
+- 边界：这是技术并发门禁修复，不改变 Q03/Q04 候选业务规则，也不构成客户业务、Windows、生产或真实数据验收。
+- 下一动作：提交当前修复并运行 `scripts/run_acceptance_review.sh`；PASS 前 T06a 保持 `review`，之后推送 draft PR，由有权集成者决定是否合并。
+
 ## 2026-09-30 Claude Code 本机：T04e 文件真正可导入 + 独立验收闸门
 
 - Task/owner/branch：T04e，owner `claude-local`；分支 `agent/claude/T04e-import-posting`（从 `agent/codex/T03-ui-rework` 的 `f289917` 接着做，独立 worktree `~/work/Ingredient-System-import`）。
