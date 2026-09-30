@@ -79,6 +79,35 @@ def test_orders_of_different_owners_cannot_share_a_sheet(world):
     assert err.value.code == "mixed_owner"
 
 
+def test_combined_order_numbers_are_rejected_instead_of_silently_truncated(world, client):
+    world.opening(20)
+    order_ids = [world.accept(f"SYN-{i}-" + "X" * 34, 1).result["order_id"] for i in range(6)]
+    full_text = " & ".join(Order.objects.get(pk=pk).number for pk in order_ids)
+    assert len(full_text) == 255
+
+    with pytest.raises(DomainError) as err:
+        pallet_sheets.create_sheet(
+            order_ids=order_ids,
+            ship_to="合成客戶",
+            address="合成地址",
+            delivery_time="上午",
+            pallet_count=1,
+            actor=ACTOR,
+        )
+
+    assert err.value.code == "order_numbers_too_long"
+    assert "请减少订单数量" in err.value.message
+    assert PalletSheet.objects.count() == 0
+
+    html = client.post(
+        reverse("pallet_sheet_form", args=[order_ids[0]]),
+        {**FORM, "orders": order_ids},
+    ).content.decode()
+    assert "板头纸没有生成" in html
+    assert "请减少订单数量" in html
+    assert PalletSheet.objects.count() == 0
+
+
 def test_rejected_form_keeps_typed_values_and_second_visit_is_prefilled(client, two_orders):
     a, _ = two_orders
     html = client.post(reverse("pallet_sheet_form", args=[a]), {**FORM, "pallet_count": "0", "orders": [a]}).content.decode()
