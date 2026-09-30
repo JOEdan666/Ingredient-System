@@ -12,8 +12,9 @@
 
 - 唯一理由「Windows target validation unavailable」——**有异议，附证据**：Windows 安装、中文文件名与打印属于 T07（`docs/tasks.json` T07 `blocked_by: Q01`，交付物写明「专用打印机适配暂缓，不要求打印验收阻塞试用」）；PROJECT.md 第一版目标第 6 项「专用打印集成以后确认」。T04f 只对 A12 中「重复导出不影响库存」负责，审查者已实测库存指纹不变。任务仍挂 A12（项目检查要求每个任务有验收编号），但交付物里写明 T04f 只覆盖 A12 的库存一句，Windows 部分归 T07。
 - **第 2 轮复审（`b7eff8f`）**：仍为 COULD_NOT_VERIFY、仍无代码/界面缺陷；理由是「无 Windows 证据」和「实际打印/存 PDF 未演练」。后者接受并补：新增 `scripts/print_page_check.py`（无头 Chrome 导出 PDF，报页数和每页末行；`… 2` 通过，`… 3` 失败退出 1，本机实测），并加入审查者的「打印页」关卡。前者仍是异议：Windows 归 T07，无法在这台 Mac 上产生证据。按 AGENTS.md「同一问题两次修不掉就停」，**不再第 3 次复审**，交用户决定是否接受「Windows 部分留在 T07」。
-- 附带：审查者提到 `shot.sh` 在它的环境里没跑完，但它用 drive.mjs 截图并逐张看过，不影响结论；下一轮留意是否复现。
-- 下一动作：跑 `scripts/run_acceptance_review.sh`，无论结论都推送开 draft PR（用户 2026-09-30 规则），PR 里写明结论。
+- **定时开发者按叫停指令复审（`4cb3a21`）**：独立审查再次为 `COULD_NOT_VERIFY`，唯一原因仍是这台 Mac 无法提供 A12 的 Windows 证据；没有发现可复现代码或界面缺陷。本轮已补齐并由审查者亲自验证此前缺失的 PDF 证据：Chrome 导出 2 页成功，页末分别为「共2板 (1/2)」「共2板 (2/2)」；`shot.sh` 成功且截图已目视检查；库存指纹生成、重印前后均为 `balances=4 on_hand=37 allocated=0 movements=4 orders=1 notices=0 hash=df76440d0909d046`。接受「A12 整体仍未验收」这一结论，但不通过删除或放宽 Windows 验收来换 PASS；Windows 中文文件名、内容和实际打印继续由受 Q01 阻塞的 T07 处理。完整报告：`/private/tmp/ingredient-acceptance-report-20260930-143349.txt`。同一环境阻塞已重复，按 AGENTS.md 停止继续修补并交接。
+- 附带：第 2 轮 `shot.sh` 曾没跑完；`4cb3a21` 复审已成功运行并完成目视检查，此项已关闭。
+- 下一动作：保持 T04f 为 `review` 且闸门为非 PASS；待具备 Windows 目标环境并明确 Q01 后，由 T07 补中文文件名、内容和实际打印证据，再重跑独立验收。不要在此之前合并或声称 A12 已通过。
 
 ## 2026-09-30 Claude Code 本机：T04e 文件真正可导入 + 独立验收闸门
 
