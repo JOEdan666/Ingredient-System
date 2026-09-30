@@ -7,7 +7,13 @@
 - 技术决定（未问用户）：用已有的 openpyxl；所有文本按文本写（openpyxl 会把 = 开头当公式，导入文件里的商品名可能以任何字符开头）；「可用」口径在说明页标明是 D07 候选、待 Q03；按钮放页面标题右侧（放筛选栏里会把「筛选库存」挤成竖条，已发现并改掉）。
 - 实测见 `docs/tasks.json` T10 evidence：pytest 124 passed；反例（删掉按文本写）测试失败；本机合成库真下载三个文件逐格核对；三页截图已看。
 - 未验证：Windows 上的文件名/Excel 打开效果（T07）；真实客户数据；大数据量耗时。
-- 下一动作：跑 `scripts/run_acceptance_review.sh`；无论结论都推送并开 draft PR（PR 里写明结论）。推送等用户醒来同意。
+
+### 审查叫停回应（Codex gpt-5.6-luna 审 `49f6f99` → COULD_NOT_VERIFY，无代码/界面缺陷）
+
+- 审查者实跑：prototype 124 passed、import-spike 44 passed、项目检查 PASS、`git diff --check` 通过；用 drive.mjs 真点了三页导出按钮，三个下载均 200 且带中文文件名；库存指纹前后一致（`balances=4 on_hand=37 allocated=0 movements=4 orders=0 notices=0 hash=df76440d0909d046`）。完整报告 `/private/tmp/ingredient-acceptance-report-20261001-010305-46754.txt`。
+- 唯一理由：Windows 上的中文文件名/Excel 打开效果、真实客户数据导出、大数据量耗时没有证据。**接受为「未验证」，不伪造证据**：Windows 归 T07（被 Q01 阻塞），这台 Mac 无法产出；T10 任务书已写明只覆盖 A12 中「重复导出不影响库存」和 Excel 内容中文正常。真实客户数据：本轮只导出合成库，导出表里没有也不会提交真实数据。
+- 没有可修的缺陷，所以没有改代码。与 T04f 同一类环境性阻塞（见 T04f 回应），**不再重复复审**，交用户决定是否接受「Windows 部分留在 T07」后合并。
+- 下一动作：推送并开 draft PR（PR 里写明此结论）。推送等用户醒来同意。不要把 T10 的结论说成 A12 整体或 Windows 已通过。
 
 ## 2026-10-01 Claude Code 本机：T06c 整张订单一次发货
 
