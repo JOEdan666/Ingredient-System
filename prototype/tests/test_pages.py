@@ -66,8 +66,8 @@ def test_import_reports_broken_pdf_instead_of_returning_500(client, loaded):
 def test_inventory_defaults_to_available_with_expandable_detail(client, loaded):
     html = client.get(reverse("inventory"), {"owner": "DEMO-OWNER-A"}).content.decode()
     # owner A: sellable 14 (A-01 6 + B-01 8), pending 3 is not sellable.
-    assert re.search(r'class="num big">14 ', html)
-    assert "展开实物 / 占用" in html and "不可售" in html
+    assert re.search(r'class="pavail"><b>14</b>', html)
+    assert '<details class="prod">' in html and "不可售" in html  # detail folded by default
 
 
 def test_full_outbound_flow_and_history(client, loaded):
