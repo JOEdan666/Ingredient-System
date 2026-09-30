@@ -74,6 +74,13 @@
   .aline.err { background:#fbe3e1; } .aline .gapmsg { margin-left:8px; } .aline input[type=number] { width:90px; }
   .okbar { background:#e3f4e8; padding:10px 14px; border-radius:8px; margin:0 0 14px; } .warnbar { background:var(--warn-bg); color:var(--warn-ink); padding:10px 14px; border-radius:8px; margin:0 0 14px; }
   details.oline > summary { cursor:pointer; } .alloc-form h2 { margin-top:0; }
+  .search { display:flex; gap:8px; align-items:center; } .search input { flex:1; max-width:520px; }
+  details.folder > summary { display:flex; gap:18px; align-items:baseline; font-size:15px; cursor:pointer; }
+  details.folder > summary .fname { font-weight:750; min-width:180px; } details.folder > summary .fsum { margin-left:auto; }
+  details.folder[open] > summary { margin-bottom:8px; }
+  details.prod { border-top:1px solid #e9efec; } details.prod > summary { display:grid; grid-template-columns: 110px 1fr 220px; gap:12px; padding:9px 4px; align-items:center; }
+  details.prod > summary:hover { background:#fafcfb; } .pavail { text-align:right; } .pavail b { font-size:18px; color:#174e42; }
+  .pdetail { padding:4px 8px 14px 24px; background:#fafcfb; } .pdetail .calc { margin:6px 0 0; }
   .facts { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
   .facts > div { min-width:0; overflow-wrap:anywhere; }
   .cutover label { display:block; margin:8px 0; } .cutover label.check { display:inline-flex; margin-right:16px; } .cutover input[type=datetime-local] { margin-left:8px; }
