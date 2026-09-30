@@ -104,6 +104,7 @@
     <a href="{% url 'outbound' %}" class="{% if request.resolver_match.url_name == 'outbound' or request.resolver_match.url_name == 'order_detail' %}on{% endif %}">出库</a>
     <a href="{% url 'history' %}" class="{% if request.resolver_match.url_name == 'history' %}on{% endif %}">历史查询</a>
     <a href="{% url 'staff' %}" class="{% if request.resolver_match.url_name == 'staff' %}on{% endif %}">员工名单</a>
+    <a href="{% url 'errors' %}" class="{% if request.resolver_match.url_name == 'errors' %}on{% endif %}">错误记录</a>
   </nav>
 </header>
 <main>

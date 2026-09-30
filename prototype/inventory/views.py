@@ -17,7 +17,7 @@ from .domain import DomainError
 from .receiving_batch import LineErrors
 from . import allocation_batch, exports, folders, import_posting, pallet_sheets, receiving_batch, staff
 from .import_preview import PreviewError, parse_upload, problem_summary, recheck
-from .models import Allocation, Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet, Staff
+from .models import Allocation, Condition, ImportBatch, LineCancellation, ErrorLog, Location, Order, OrderLine, Owner, PalletSheet, Staff
 from .synthetic import load_synthetic_fixture
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
@@ -546,3 +546,14 @@ def export_movements(request):
 @require_GET
 def export_orders(request):
     return _xlsx(request, "订单", exports.orders_workbook())
+
+
+# 错误记录 -----------------------------------------------------------------
+
+def errors_page(request):
+    """Newest unexpected failures first; an employee who reports a code can be found by typing it."""
+    code = request.GET.get("code", "").strip()
+    rows = ErrorLog.objects.order_by("-pk")
+    if code:
+        rows = rows.filter(code__icontains=code)
+    return render(request, "inventory/errors.html", _ctx(request, code=code, rows=rows[:100], total=ErrorLog.objects.count()))

@@ -1,0 +1,14 @@
+{% extends "inventory/base.html" %}
+{% block title %}错误记录{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="eyebrow">Error log</div><h1>错误记录</h1><p>系统遇到没预料到的问题时留下的记录。不含商品、客户、数量等业务数据。库存不够、数量填错这类正常拒绝不算错误，不会出现在这里。</p></div></div>
+<form method="get" class="card inline"><label>错误编号 <input name="code" value="{{ code }}" placeholder="例如 E-7F3A9C21"></label> <button>查找</button>{% if code %} <a href="{% url 'errors' %}">显示全部</a>{% endif %}</form>
+<div class="card">
+  <table>
+    <tr><th>编号</th><th>时间</th><th>操作</th><th>页面</th><th>错误类型</th><th>出错位置</th></tr>
+    {% for r in rows %}<tr><td><strong>{{ r.code }}</strong></td><td>{{ r.created_at|date:"Y-m-d H:i:s" }}</td><td>{{ r.method }}</td><td>{{ r.path }}</td><td>{{ r.error_type }}</td><td class="muted">{{ r.location|default:"—" }}</td></tr>
+    {% empty %}<tr><td colspan="6" class="muted">{% if code %}没有找到这个编号。{% else %}还没有错误记录。{% endif %}</td></tr>{% endfor %}
+  </table>
+  <p class="muted">共 {{ total }} 条；只显示最新 100 条，系统最多保留最新 1000 条。</p>
+</div>
+{% endblock %}

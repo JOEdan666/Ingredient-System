@@ -26,6 +26,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "inventory.errors.ErrorLogMiddleware",
 ]
 
 ROOT_URLCONF = "proto_site.urls"

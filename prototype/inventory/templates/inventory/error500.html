@@ -1,0 +1,15 @@
+{% extends "inventory/base.html" %}
+{% block title %}出错了{% endblock %}
+{% block content %}
+<div class="page-head"><div><div class="eyebrow">Something went wrong</div><h1>这一步没有成功</h1><p>系统遇到了没预料到的问题。这次操作<strong>可能没有完成，也可能已经完成</strong>——重试之前，请先到对应页面（库存、订单、历史查询）看一下结果，避免重复操作。</p></div></div>
+<div class="card">
+  {% if code %}
+  <p>如果还是不行，请把这个<strong>错误编号</strong>告诉负责人：</p>
+  <p style="font-size:26px;font-weight:700;letter-spacing:.06em;margin:8px 0">{{ code }}</p>
+  <p class="muted">编号可以在「<a href="{% url 'errors' %}">错误记录</a>」里查到出错的页面和时间。</p>
+  {% else %}
+  <p>这次连错误记录也没能保存，请把出错的时间和你在做什么告诉负责人。</p>
+  {% endif %}
+  <p><a href="javascript:history.back()">← 返回上一页</a> · <a href="{% url 'inventory' %}">回到库存</a></p>
+</div>
+{% endblock %}

@@ -416,3 +416,17 @@ class Staff(models.Model):
     name = models.CharField(max_length=40, unique=True)
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class ErrorLog(models.Model):
+    """One row per unexpected failure (T11). Deliberately holds NO business data: only the page address
+    without its query string, the error class and where it was raised. The exception message is never
+    stored because it can quote products, customers or quantities.
+    """
+
+    code = models.CharField(max_length=20, unique=True)  # shown to the employee, e.g. E-7F3A9C21
+    created_at = models.DateTimeField(auto_now_add=True)
+    method = models.CharField(max_length=10)
+    path = models.CharField(max_length=200)
+    error_type = models.CharField(max_length=80)
+    location = models.CharField(max_length=120, blank=True)  # file:line function of the innermost frame
