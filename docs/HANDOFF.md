@@ -10,7 +10,7 @@
 
 ### 审查叫停回应（Codex gpt-5.6-luna 审 `270f120` → COULD_NOT_VERIFY，无代码/界面缺陷）
 
-- 唯一理由「Windows target validation unavailable」——**有异议，附证据**：Windows 安装、中文文件名与打印属于 T07（`docs/tasks.json` T07 `blocked_by: Q01`，交付物写明「专用打印机适配暂缓，不要求打印验收阻塞试用」）；PROJECT.md 第一版目标第 6 项「专用打印集成以后确认」。T04f 只对 A12 中「重复导出不影响库存」负责，审查者已实测库存指纹不变。原先把整个 A12 挂在 T04f 上是我的登记错误，已改为不挂 A12 并在交付物里写明范围。
+- 唯一理由「Windows target validation unavailable」——**有异议，附证据**：Windows 安装、中文文件名与打印属于 T07（`docs/tasks.json` T07 `blocked_by: Q01`，交付物写明「专用打印机适配暂缓，不要求打印验收阻塞试用」）；PROJECT.md 第一版目标第 6 项「专用打印集成以后确认」。T04f 只对 A12 中「重复导出不影响库存」负责，审查者已实测库存指纹不变。任务仍挂 A12（项目检查要求每个任务有验收编号），但交付物里写明 T04f 只覆盖 A12 的库存一句，Windows 部分归 T07。
 - 附带：审查者提到 `shot.sh` 在它的环境里没跑完，但它用 drive.mjs 截图并逐张看过，不影响结论；下一轮留意是否复现。
 - 下一动作：跑 `scripts/run_acceptance_review.sh`，无论结论都推送开 draft PR（用户 2026-09-30 规则），PR 里写明结论。
 

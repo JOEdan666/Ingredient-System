@@ -332,7 +332,9 @@
         "T03"
       ],
       "blocked_by": [],
-      "acceptance": [],
+      "acceptance": [
+        "A12"
+      ],
       "scope": [
         "prototype/"
       ],
