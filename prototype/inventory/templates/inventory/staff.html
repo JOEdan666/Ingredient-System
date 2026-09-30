@@ -1,0 +1,36 @@
+{% extends "inventory/base.html" %}
+{% block title %}员工名单{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">STAFF</div>
+    <h1>员工名单</h1>
+    <p>这里的名字会出现在每个「操作人」下拉框里，历史记录会写下是谁做的。名字只保存在这台电脑的数据库里。</p>
+  </div>
+</div>
+
+{% if not real_staff %}<div class="note">还没有添加真实员工，系统暂时用演示名字（合成）。添加第一位真实员工后，演示名字就不能再用了。</div>{% endif %}
+
+<form method="post" class="card inline">
+  {% csrf_token %}<input type="hidden" name="action" value="add">
+  <label>新员工姓名 <input name="name" maxlength="40" required placeholder="例如：陈大文"></label>
+  <button type="submit">添加</button>
+</form>
+
+<div class="card">
+  <table>
+    <thead><tr><th>姓名</th><th>状态</th><th></th></tr></thead>
+    <tbody>
+    {% for p in people %}
+      <tr><td>{{ p.name }}</td>
+      <td>{% if p.active %}<span class="tag AVAILABLE">在岗</span>{% else %}<span class="tag HOLD">已停用</span>{% endif %}</td>
+      <td><form method="post" class="inline">{% csrf_token %}<input type="hidden" name="staff_id" value="{{ p.pk }}">
+        {% if p.active %}<input type="hidden" name="action" value="deactivate"><button type="submit" class="secondary">停用</button>
+        {% else %}<input type="hidden" name="action" value="activate"><button type="submit" class="secondary">恢复</button>{% endif %}</form></td></tr>
+    {% empty %}<tr><td colspan="3" class="muted">还没有员工。</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted">停用不会删除名字：以前的记录还要显示是谁做的。</p>
+</div>
+{% endblock %}

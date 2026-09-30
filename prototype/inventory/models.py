@@ -402,3 +402,17 @@ class PalletSheet(models.Model):
     class Meta:
         constraints = [models.CheckConstraint(condition=Q(pallet_count__gte=1) & Q(pallet_count__lte=99),
                                               name="pallet_count_1_99")]
+
+
+class Staff(models.Model):
+    """Named operators for the actor drop-down (local database only, never committed).
+
+    While the table is empty the prototype offers the synthetic demo names;
+    once at least one active person exists, only active staff are accepted.
+    Names are kept when someone leaves (active=False) because posted rows
+    already carry them.
+    """
+
+    name = models.CharField(max_length=40, unique=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)

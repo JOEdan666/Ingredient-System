@@ -87,10 +87,12 @@
     <a href="{% url 'receiving' %}" class="{% if request.resolver_match.url_name == 'receiving' %}on{% endif %}">收货</a>
     <a href="{% url 'outbound' %}" class="{% if request.resolver_match.url_name == 'outbound' or request.resolver_match.url_name == 'order_detail' %}on{% endif %}">出库</a>
     <a href="{% url 'history' %}" class="{% if request.resolver_match.url_name == 'history' %}on{% endif %}">历史查询</a>
+    <a href="{% url 'staff' %}" class="{% if request.resolver_match.url_name == 'staff' %}on{% endif %}">员工名单</a>
   </nav>
 </header>
 <main>
   {% if messages %}<ul class="msgs">{% for m in messages %}<li class="{{ m.tags }}">{{ m }}</li>{% endfor %}</ul>{% endif %}
+  {% if not real_staff and request.resolver_match.url_name != 'staff' %}<div class="note">操作人现在用的是演示名字（合成）。正式试用前请先到<a href="{% url 'staff' %}">员工名单</a>添加真实员工，之后所有记录才会写真名。</div>{% endif %}
   {% block content %}{% endblock %}
 </main>
 </body>

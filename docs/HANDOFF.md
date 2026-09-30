@@ -1,5 +1,13 @@
 # 当前交接
 
+## 2026-09-30 Claude Code 本机：T03b 员工名单（堆叠在 T04f 上）
+
+- Task/owner/branch：T03b，owner `claude-local`；分支 `agent/claude/T03b-staff-list`，基于 T04f 分支 `b7eff8f`（两边都新增迁移，故堆叠，本分支迁移为 0004）。合并顺序：先 T04f（PR #15）再本分支。
+- 起因：操作人下拉是写死的「员工甲（合成）」，导致历史记录没有真名。真实姓名只有用户有，所以做成用户自己在页面录入的名单，**不进仓库**。
+- 改动：`Staff` 表；`inventory/staff.py`（校验与增删）；所有提交在服务端 `check_actor`；`/staff/` 页与导航；名单为空时提示「操作人现在用的是演示名字」。
+- 边界：这不是登录/权限（第一版目标第 7 项）——任何人仍可在下拉里选别人的名字，只是名字必须是名单里的在岗员工。
+- 下一动作：跑 `scripts/run_acceptance_review.sh`；无论结论都推送开 draft PR。
+
 ## 2026-09-30 Claude Code 本机：T04f 板头纸生成
 
 - Task/owner/branch：T04f，owner `claude-local`；分支 `agent/claude/T04f-pallet-sheet`（基于 `main` `9149af3`，PR #14 已合并）。
