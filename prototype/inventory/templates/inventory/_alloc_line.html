@@ -1,0 +1,16 @@
+<div class="aline{% if l.error %} err{% elif l.gap %} diff{% endif %}" data-need="{{ l.need }}">
+  <div class="ahead"><strong>第 {{ l.line_no }} 行 · 商品 {{ l.product }}</strong>{% if l.source_line %} <span class="muted">原件{{ l.source_line }}</span>{% endif %}
+    {% if l.requested_expiry %}<span class="tag">指定效期 {{ l.requested_expiry|date:"Y-m-d" }}</span>{% endif %}
+    <span class="muted">需分配 {{ l.need }}</span> · 已填 <b class="entered">{{ l.entered }}</b>
+    <span class="gapmsg">{% if l.gap > 0 %}还差 {{ l.gap }}{% elif l.gap < 0 %}多填了 {{ l.gap|stringformat:"d"|slice:"1:" }}{% else %}已配好{% endif %}</span>
+    {% if l.prefilled %}<span class="muted">（只有一处同效期库存，已先填好，可改）</span>{% endif %}
+    {% if l.error %}<div class="rowerr">{{ l.error }}</div>{% endif %}</div>
+  <table>
+    <tr><th>批次</th><th>批号</th><th>效期</th><th>货位</th><th class="num">可分配</th><th>这次分配</th></tr>
+    {% for c in l.candidates %}
+    <tr><td>{{ c.lot }}</td><td>{{ c.external_lot }}</td><td>{{ c.expiry|date:"Y-m-d"|default:"未知" }}</td>
+      <td>{{ c.location }} <span class="muted">{{ c.location_kind }}</span></td><td class="num">{{ c.free }}</td>
+      <td><input type="number" name="pick_{{ l.id }}_{{ c.id }}" min="0" max="{{ c.free }}" value="{{ c.value }}" oninput="allocSum(this)"></td></tr>
+    {% empty %}<tr><td colspan="6" class="muted">没有符合条件的合格库存（同货主、同商品{% if l.requested_expiry %}、同效期{% endif %}）。这一行先空着，可以保存别的行。</td></tr>{% endfor %}
+  </table>
+</div>

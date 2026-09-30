@@ -12,7 +12,8 @@ from django.views.decorators.http import require_POST
 
 from . import domain, queries
 from .domain import DomainError
-from . import folders, import_posting, pallet_sheets, receiving_batch, staff
+from .receiving_batch import LineErrors
+from . import allocation_batch, folders, import_posting, pallet_sheets, receiving_batch, staff
 from .import_preview import PreviewError, parse_upload, problem_summary, recheck
 from .models import Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet, Staff
 from .synthetic import load_synthetic_fixture
@@ -369,29 +370,51 @@ def pallet_sheet_print(request, sheet_id):
                   {"sheet": sheet, "pages": pallet_sheets.pages(sheet), "back": back})
 
 
-def order_page(request, order_id):
+def order_page(request, order_id, *, posted=None, errors=None, status=200):
     detail = queries.order_detail(order_id)
     if detail is None:
         raise Http404("订单不存在")
+    errors, attention, ready, short = errors or {}, [], [], 0
+    for l in detail["lines"]:
+        need = l["numbers"]["unallocated"]
+        if not need:
+            continue
+        suggested = allocation_batch.prefill(l)
+        for c in l["candidates"]:
+            key = f"pick_{l['id']}_{c['id']}"
+            c["value"] = posted.get(key, "") if posted is not None else (str(suggested[c["id"]]) if c["id"] in suggested else "")
+        entered = sum(int(c["value"]) for c in l["candidates"] if str(c["value"]).strip().isdigit())
+        l["need"], l["entered"], l["gap"], l["error"] = need, entered, need - entered, errors.get(l["id"], "")
+        l["prefilled"] = bool(suggested) and posted is None
+        (ready if l["gap"] == 0 and not l["error"] else attention).append(l)
+        short += l["gap"] > 0
     return render(request, "inventory/order.html", _ctx(
         request, order=detail, reasons=LineCancellation.Reason.choices,
         sheets=PalletSheet.objects.filter(orders__pk=order_id).order_by("-pk"),
-    ))
+        attention=attention, ready=ready, short=short,
+        all_allocated=not attention and not ready,
+    ), status=status)
 
 
 @require_POST
 def allocate(request, order_id):
-    picks = []
+    """Whole-order allocation: one save for every line (all or nothing)."""
+    entries = {}
+    for key, value in request.POST.items():
+        parts = key.split("_")
+        if len(parts) == 3 and parts[0] == "pick" and parts[1].isdigit() and parts[2].isdigit():
+            entries.setdefault(int(parts[1]), {})[int(parts[2])] = value
     try:
-        for key, value in request.POST.items():
-            if key.startswith("pick_") and value.strip():
-                q = _int(value, "分配数量")
-                if q:
-                    picks.append({"balance_id": _int(key[5:], "库存记录编号"), "qty": q})
-        _submit(request, "分配批次/货位", domain.allocate_line,
-                line_id=_line_in_order(order_id, request.POST.get("line_id")), picks=picks)
+        result = allocation_batch.allocate_order(
+            order_id=order_id, actor=staff.check_actor(request.POST.get("actor", "")),
+            operation_id=request.POST.get("operation_id", ""), entries=entries)
+    except LineErrors as err:
+        messages.error(request, f"整张订单没有保存：{err.message}")
+        return order_page(request, order_id, posted=request.POST, errors=err.errors, status=400)
     except DomainError as err:
-        messages.error(request, f"分配被拒绝：{err.message}")
+        messages.error(request, f"整张订单没有保存：{err.message}")
+        return order_page(request, order_id, posted=request.POST, status=400)
+    messages.success(request, f"分配已保存：{result['lines']} 行，共 {result['qty']} 件。")
     return redirect("order_detail", order_id=order_id)
 
 

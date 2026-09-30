@@ -81,11 +81,11 @@ def test_full_outbound_flow_and_history(client, loaded):
     pending = StockBalance.objects.get(owner__code="DEMO-OWNER-A", condition="PENDING_INSPECTION")
 
     page = client.get(reverse("order_detail", kwargs={"order_id": order.pk})).content.decode()
-    assert f'name="pick_{a01.pk}"' in page and f'name="pick_{pending.pk}"' not in page  # pending not offered
+    assert f'name="pick_{line.pk}_{a01.pk}"' in page and f'_{pending.pk}"' not in page  # pending not offered
 
-    resp = post(client, "allocate", {"line_id": line.pk, f"pick_{a01.pk}": "6", f"pick_{b01.pk}": "4"},
+    resp = post(client, "allocate", {f"pick_{line.pk}_{a01.pk}": "6", f"pick_{line.pk}_{b01.pk}": "4"},
                 order_id=order.pk)
-    assert "分配批次/货位完成" in resp.content.decode()
+    assert "分配已保存：1 行，共 10 件" in resp.content.decode()
     items = {f"ship_{a.pk}": str(a.qty_open) for a in Allocation.objects.filter(order_line=line)}
     resp = post(client, "ship", items, order_id=order.pk)
     assert "发货完成" in resp.content.decode()
@@ -149,17 +149,26 @@ def test_allocate_with_line_of_another_order_is_rejected(client, loaded):
     order_x, order_y = _two_orders(client)
     line_y = order_y.lines.get()
     a01 = StockBalance.objects.get(location__code="A-01", owner__code="DEMO-OWNER-A")
-    resp = post(client, "allocate", {"line_id": line_y.pk, f"pick_{a01.pk}": "1"}, order_id=order_x.pk)
-    assert "不属于当前订单" in resp.content.decode()
+    resp = post(client, "allocate", {f"pick_{line_y.pk}_{a01.pk}": "1"}, order_id=order_x.pk)
+    assert "不属于这张订单" in resp.content.decode()
     assert not Allocation.objects.filter(order_line=line_y).exists()
 
 
-@pytest.mark.parametrize("name,field", [("allocate", "pick_abc"), ("ship", "ship_abc")])
-def test_non_numeric_ids_in_form_are_rejected_not_500(client, loaded, name, field):
+def test_non_numeric_ship_id_is_rejected_not_500(client, loaded):
     order_x, _ = _two_orders(client)
-    data = {field: "1"}
-    if name == "allocate":
-        data["line_id"] = order_x.lines.get().pk
-    resp = post(client, name, data, order_id=order_x.pk)
+    resp = post(client, "ship", {"ship_abc": "1"}, order_id=order_x.pk)
     assert resp.status_code == 200
     assert "必须是整数" in resp.content.decode()
+
+
+@pytest.mark.parametrize("field_fmt, value, text", [
+    ("pick_abc", "1", "一个数量都没填"),               # malformed key: ignored, nothing to save
+    ("pick_{line}_{bal}", "abc", "分配数量必须是 0 或正整数"),  # malformed quantity
+])
+def test_bad_allocation_input_is_refused_not_500(client, loaded, field_fmt, value, text):
+    order_x, _ = _two_orders(client)
+    line = order_x.lines.get()
+    a01 = StockBalance.objects.get(location__code="A-01", owner__code="DEMO-OWNER-A")
+    resp = post(client, "allocate", {field_fmt.format(line=line.pk, bal=a01.pk): value}, order_id=order_x.pk)
+    assert resp.status_code == 400 and text in resp.content.decode()
+    assert not Allocation.objects.filter(order_line=line).exists()
