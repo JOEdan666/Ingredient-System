@@ -133,8 +133,13 @@ def notices() -> list[dict]:
                     for r in receipts
                 ],
             })
+        first = min((r for l in lines for r in l["receipts"]), key=lambda r: r["at"], default=None)
         result.append({"id": n.pk, "owner": n.owner.code, "number": n.number, "created_by": n.created_by,
-                       "created_at": n.created_at, "lines": lines})
+                       "created_at": n.created_at, "lines": lines,
+                       "total_expected": sum(l["qty_expected"] for l in lines),
+                       "total_received": sum(l["received"] for l in lines),
+                       "received": first is not None,
+                       "received_by": first["actor"] if first else "", "received_at": first["at"] if first else None})
     return result
 
 

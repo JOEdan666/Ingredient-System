@@ -14,6 +14,7 @@ urlpatterns = [
     path("receiving/", views.receiving_page, name="receiving"),
     path("receiving/notice/", views.create_notice, name="create_notice"),
     path("receiving/receipt/", views.confirm_receipt, name="confirm_receipt"),
+    path("receiving/notice/<int:notice_id>/receive/", views.receive_notice, name="receive_notice"),
     path("receiving/condition/", views.change_condition, name="change_condition"),
     path("outbound/", views.outbound_page, name="outbound"),
     path("outbound/accept/", views.accept_order, name="accept_order"),
