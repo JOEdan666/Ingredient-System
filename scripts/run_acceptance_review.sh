@@ -21,14 +21,20 @@ TASK='Independently review current HEAD of this repository against origin/main, 
 has_verdict() { [ -s "$1" ] && grep -qE '^ACCEPTANCE_VERDICT: (PASS|CHANGES_REQUESTED|COULD_NOT_VERIFY)' "$1"; }
 
 # 跑一个命令，超时就杀掉；caffeinate 防止合盖前熄屏打断
+kill_tree() {  # 先杀子孙再杀自己：审查者起的 Chrome、测试服务器不能在超时后残留
+  local p
+  for p in $(pgrep -P "$1"); do kill_tree "$p"; done
+  kill "$1" 2>/dev/null
+}
+
 run_bounded() {
   "$@" &
   local pid=$!
   caffeinate -dims -w "$pid" >/dev/null 2>&1 &
-  ( sleep "$TIMEOUT_S"; kill "$pid" 2>/dev/null ) &
+  ( sleep "$TIMEOUT_S"; echo "超时 ${TIMEOUT_S}s，结束审查进程及其子进程" >>"$LOG"; kill_tree "$pid" ) &
   local killer=$!
   wait "$pid"; local rc=$?
-  kill "$killer" 2>/dev/null
+  kill_tree "$killer"
   return $rc
 }
 
@@ -90,8 +96,17 @@ line="$(grep -m1 -E '^ACCEPTANCE_VERDICT:' "$OUT")"; echo "$line"
 # 写「审查闸门」：不是 PASS 就是叫停状态，.claude/hooks/review-gate.sh 和 AGENTS.md 会让开发者先停下处理
 branch="$(git -C "$REPO" rev-parse --abbrev-ref HEAD)"
 gate_dir="$HOME/agent-archive/review-gate/Ingredient-System"; mkdir -p "$gate_dir"
+if [ "$branch" = "HEAD" ]; then  # 游离检出（临时副本）没有分支，不写闸门，免得生成 HEAD.md 这种无主记录
+  echo "当前是游离检出，结论只写在报告里，不写闸门。"
+  case "$status" in PASS) exit 0 ;; BLOCKED:CHANGES_REQUESTED) exit 1 ;; *) exit 2 ;; esac
+fi
 gate="$gate_dir/${branch//\//__}.md"
 status="$(echo "$line" | awk '{print $2}')"; [ "$status" = "PASS" ] || status="BLOCKED:$status"
+# 审查者报的版本必须就是当前版本，否则结论不能套用
+reported="$(echo "$line" | awk '{print $3}')"; head_sha="$(git -C "$REPO" rev-parse HEAD)"
+if [ "$status" = "PASS" ] && [ "$reported" != "$head_sha" ]; then
+  status="BLOCKED:SHA_MISMATCH"; echo "警告：审查者报告的版本 $reported 不是当前 HEAD $head_sha，不记为通过。" | tee -a "$LOG"
+fi
 { echo "status: $status"; echo "branch: $branch"; echo "sha: $(git -C "$REPO" rev-parse HEAD)"
   echo "time: $(date '+%Y-%m-%d %H:%M')"; echo "reviewer: ${REVIEWED_BY}"; echo "reviewer_log: $LOG"; echo "report: $OUT"; echo; cat "$OUT"; } > "$gate"
 cp "$gate" "$gate_dir/history-$STAMP-${branch//\//__}.md"
