@@ -1,5 +1,11 @@
 # 当前交接
 
+## 2026-10-01 Claude Code 本机：T06c 整张订单一次发货
+
+- 分支 `agent/claude/T06c-ship-whole-order`（基于 main `46186e4`，#19 合并后才开，避免冲突）。
+- 用户对验收单调用 who-decides：照搬已批做法、无新业务规则的功能不再发验收单（已写进 work-rhythm 第 0 条）。domain.ship 本就支持整单一次发货，本次主要是页面与逐项校验。
+- 等待：用户看截图（第 5 步）。
+
 ## 2026-09-30 Claude Code 本机：T06b 整张订单一次选货位
 
 - 分支 `agent/claude/T06b-allocate-whole-order`（基于 main `16752fd`）。用户先批验收单再开发。

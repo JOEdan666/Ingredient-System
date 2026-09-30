@@ -1,0 +1,7 @@
+<tr class="srow{% if r.error %} err{% elif r.left %} diff{% endif %}" data-open="{{ r.open }}">
+  <td>第 {{ r.line_no }} 行</td><td>{{ r.product }}</td><td>{{ r.location }}</td><td>{{ r.expiry|date:"Y-m-d"|default:"未知" }}</td><td>{{ r.lot }}</td>
+  <td class="num">{{ r.open }}</td>
+  <td><input type="number" name="{{ r.key }}" min="0" max="{{ r.open }}" value="{{ r.value }}" oninput="shipLeft(this)"></td>
+  <td class="left">{% if r.left %}{% if r.left > 0 %}这次少发 {{ r.left }}，留下次{% else %}多发了 {{ r.left|stringformat:"d"|slice:"1:" }}{% endif %}{% endif %}</td>
+  <td class="rowerr">{{ r.error }}</td>
+</tr>

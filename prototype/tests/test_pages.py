@@ -157,8 +157,8 @@ def test_allocate_with_line_of_another_order_is_rejected(client, loaded):
 def test_non_numeric_ship_id_is_rejected_not_500(client, loaded):
     order_x, _ = _two_orders(client)
     resp = post(client, "ship", {"ship_abc": "1"}, order_id=order_x.pk)
-    assert resp.status_code == 200
-    assert "必须是整数" in resp.content.decode()
+    assert resp.status_code == 400
+    assert "不属于这张订单" in resp.content.decode()
 
 
 @pytest.mark.parametrize("field_fmt, value, text", [
