@@ -12,6 +12,10 @@
 
 1. 「当前 SHA 尚未推送，无法取得目标 PostgreSQL 18.6 CI」——**接受并补证**。审查者已重跑本机 PostgreSQL 14.22 的 45 条全集、15 条并发、JUnit 计数以及其它仓库回归，未发现可复现代码缺陷；但本机 14 不能替代目标 18.6。先提交本回应并推送分支触发 `.github/workflows/db-tests.yml`，等当前最终 SHA 的 `postgres-domain` 成功后，再运行同一独立验收脚本。CI 与复审均通过前保持 `review`，不标 `done`。
 
+### 审查叫停回应（第 3 轮：Codex 审 `8be6ba5` → CHANGES_REQUESTED）
+
+1. 低「任务证据和旧状态段仍写 13 条并发测试，和当前 15 条不一致」——**接受并修**。把 `docs/tasks.json` 的当前证据改为 15 条/15 通过；把下方历史状态明确标为“PR #12 合并当时”，同时补上 2026-09-30 修复后的当前计数，避免旧数字被误读为当前结论。代码未改；文档修复后仍按当前最终 SHA 重跑项目检查、数据库/并发回归和独立验收。
+
 - 实测（本机 PostgreSQL 14.22，合成数据）：`application` 全集 **45 passed**；并发子集 **15 passed, 30 deselected**；JUnit 校验 `executed=15, expected>=15, failed=0`。临时去掉余额 `select_for_update()` 后，新测试按预期失败，并检测到 `on_hand 4 ≠ 流水合计 -2`；恢复锁后重新全绿。额外回归：`prototype` **61 passed**、`import-spike` **44 passed**、`scripts/check_project.py` PASS、`git diff --check` 无输出。
 - 边界：这是技术并发门禁修复，不改变 Q03/Q04 候选业务规则，也不构成客户业务、Windows、生产或真实数据验收。
 - 下一动作：提交当前修复并运行 `scripts/run_acceptance_review.sh`；PASS 前 T06a 保持 `review`，之后推送 draft PR，由有权集成者决定是否合并。
@@ -118,12 +122,12 @@
 ## 当前状态
 
 - 远端 `main` 已合并 T06a 的 [PR #12](https://github.com/JOEdan666/Ingredient-System/pull/12)；T04b 在独立分支 `agent/codex/T04b-real-format-import`，开放 draft [PR #11](https://github.com/JOEdan666/Ingredient-System/pull/11)，Claude 对其解析器最终改动 `275d8e1` 审查 PASS。T04c 依赖 T04b，仍未开工。
-- `application/` 由 T06a 带入 main：领域模型、命令、迁移与合成数据回归用例连接 PostgreSQL，不含网页和生产部署。新增锁探针、缺锁反例、13 条 PostgreSQL 并发/失败检查及独立 CI 工作流；见 [test-commands.md](test-commands.md)。T06/T07/T08 仍因业务问题阻塞。库存规则只按 D07/D09 候选设计测试，不代表客户验收。
+- `application/` 由 T06a 带入 main：领域模型、命令、迁移与合成数据回归用例连接 PostgreSQL，不含网页和生产部署。PR #12 合并时有 13 条 PostgreSQL 并发/失败检查；2026-09-30 补齐同一来源余额的并发移位后，当前为 15 条。独立 CI 工作流见 [test-commands.md](test-commands.md)。T06/T07/T08 仍因业务问题阻塞。库存规则只按 D07/D09 候选设计测试，不代表客户验收。
 
 ## 本轮实测与限制
 
 - `python3 scripts/check_project.py`：`PASS: 12 tasks, 14 acceptance definitions, synthetic fixture and local links`。
-- 本机 PostgreSQL 14.22 临时测试库：`application/` 的 `uv run --frozen pytest -ra` 为 **43 passed**；并发子集 **13 passed, 30 deselected**；计数脚本 `executed=13, expected>=13, failed=0`。这是本机数据库调试，不是目标 PostgreSQL 18 的测试结论。
+- PR #12 合并当时的本机 PostgreSQL 14.22 记录为 **43 passed**、并发 **13 passed, 30 deselected**、计数 `executed=13, expected>=13, failed=0`；2026-09-30 同源余额锁修复后的当前记录为 **45 passed**、并发 **15 passed, 30 deselected**、计数 `executed=15, expected>=15, failed=0`。这些都是本机数据库调试，不是目标 PostgreSQL 18 的测试结论。
 - 目标 18.6 CI 首次未启动 job：GitHub 报 `(Line: 37, Col: 21): Unrecognized named-value: 'runner'`。删除 job 级 `UV_CACHE_DIR` 后，提交 `e2d3ef3` 的 [Actions run 36575919504](https://github.com/JOEdan666/Ingredient-System/actions/runs/36575919504) 和提交 `449d201` 的 [Actions run 36576125734](https://github.com/JOEdan666/Ingredient-System/actions/runs/36576125734) 均显示 `postgres-domain` 成功，全部测试及并发计数步骤均成功。此结果是合成数据技术测试，不是客户业务验收。Windows 安装/升级、真实客户数据、真实业务验收均未执行。
 - 详细命令、版本、并发钩子与限制见 [test-commands.md](test-commands.md)。
 
