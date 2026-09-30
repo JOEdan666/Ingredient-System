@@ -1,6 +1,6 @@
 name = "acceptance-reviewer"
 description = "Independent release gate (runs on Codex; scripts/run_acceptance_review.sh falls back to Claude Code when Codex has no quota) for Ingredient-System. Reviews the final diff, runs the real test suites, launches changed UI, exercises it with approved desktop files, visually inspects screenshots, and returns evidence-backed PASS, CHANGES_REQUESTED, or COULD_NOT_VERIFY."
-model = "gpt-6-sol"
+model = "gpt-5.6-luna"
 model_reasoning_effort = "medium"
 sandbox_mode = "danger-full-access"
 

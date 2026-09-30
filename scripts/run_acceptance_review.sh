@@ -4,6 +4,7 @@
 # 用法: scripts/run_acceptance_review.sh            # 先 Codex，失败自动换 Claude
 #       REVIEWER=claude scripts/run_acceptance_review.sh   # 直接用 Claude（测试兜底用）
 #       REVIEWER=codex  scripts/run_acceptance_review.sh   # 只用 Codex，不兜底
+#       CODEX_MODEL=gpt-5.6-sol scripts/run_acceptance_review.sh   # 换 Codex 模型（默认 gpt-5.6-luna）
 # 结果: 报告写到 /private/tmp/ingredient-acceptance-report-<时间>.txt，最后一行打印 ACCEPTANCE_VERDICT。
 # 退出码: 0=PASS 1=CHANGES_REQUESTED 2=COULD_NOT_VERIFY 3=两边都没给出结论
 set -u
@@ -14,6 +15,7 @@ OUT="/private/tmp/ingredient-acceptance-report-$STAMP.txt"
 LOG="/private/tmp/ingredient-acceptance-log-$STAMP.txt"
 MODE="${REVIEWER:-auto}"
 TIMEOUT_S="${REVIEW_TIMEOUT_S:-2400}"
+CODEX_MODEL="${CODEX_MODEL:-gpt-5.6-luna}"   # sol 没额度时 luna 常还有
 export DEVELOPER_DIR=/Library/Developer/CommandLineTools   # 绕过 Xcode 许可拦截
 
 TASK='Independently review current HEAD of this repository against origin/main, following every gate in your instructions (first-time-user gate, words-versus-behavior gate, automated checks, UI gate with drive.mjs and shot.sh, approved real-file gate, stock non-mutation). Do not modify the repository, Desktop, source files, or user configuration. End with your full report; its first line must be the ACCEPTANCE_VERDICT line.'
@@ -40,11 +42,15 @@ run_bounded() {
 }
 
 run_codex() {
-  REVIEWED_BY=codex
-  echo "== 审查者: Codex ($(date +%H:%M:%S))" | tee -a "$LOG"
-  run_bounded codex exec --sandbox danger-full-access --enable multi_agent -C "$REVIEW_DIR" -o "$OUT" \
-    "Use the custom acceptance-reviewer agent. Give it this task and return its report unchanged: $TASK" \
-    < /dev/null >>"$LOG" 2>&1
+  REVIEWED_BY="codex ${CODEX_MODEL}"
+  echo "== 审查者: Codex ${CODEX_MODEL} ($(date +%H:%M:%S))" | tee -a "$LOG"
+  # 直接把审查指令交给一个 Codex（不再让它再派一个子 agent），省一层上下文；模型可用 CODEX_MODEL 换
+  local instr
+  instr="$(python3 -c 'import sys,tomllib;print(tomllib.load(open(sys.argv[1],"rb"))["developer_instructions"])' "$AGENT")" || return 1
+  run_bounded codex exec --sandbox danger-full-access -m "$CODEX_MODEL" -c model_reasoning_effort=medium \
+    -C "$REVIEW_DIR" -o "$OUT" "$instr
+
+TASK: $TASK" < /dev/null >>"$LOG" 2>&1
   echo "codex 退出码 $?" >>"$LOG"
 }
 
