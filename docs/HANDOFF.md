@@ -11,6 +11,7 @@
 ### 审查叫停回应（Codex gpt-5.6-luna 审 `270f120` → COULD_NOT_VERIFY，无代码/界面缺陷）
 
 - 唯一理由「Windows target validation unavailable」——**有异议，附证据**：Windows 安装、中文文件名与打印属于 T07（`docs/tasks.json` T07 `blocked_by: Q01`，交付物写明「专用打印机适配暂缓，不要求打印验收阻塞试用」）；PROJECT.md 第一版目标第 6 项「专用打印集成以后确认」。T04f 只对 A12 中「重复导出不影响库存」负责，审查者已实测库存指纹不变。任务仍挂 A12（项目检查要求每个任务有验收编号），但交付物里写明 T04f 只覆盖 A12 的库存一句，Windows 部分归 T07。
+- **第 2 轮复审（`b7eff8f`）**：仍为 COULD_NOT_VERIFY、仍无代码/界面缺陷；理由是「无 Windows 证据」和「实际打印/存 PDF 未演练」。后者接受并补：新增 `scripts/print_page_check.py`（无头 Chrome 导出 PDF，报页数和每页末行；`… 2` 通过，`… 3` 失败退出 1，本机实测），并加入审查者的「打印页」关卡。前者仍是异议：Windows 归 T07，无法在这台 Mac 上产生证据。按 AGENTS.md「同一问题两次修不掉就停」，**不再第 3 次复审**，交用户决定是否接受「Windows 部分留在 T07」。
 - 附带：审查者提到 `shot.sh` 在它的环境里没跑完，但它用 drive.mjs 截图并逐张看过，不影响结论；下一轮留意是否复现。
 - 下一动作：跑 `scripts/run_acceptance_review.sh`，无论结论都推送开 draft PR（用户 2026-09-30 规则），PR 里写明结论。
 
