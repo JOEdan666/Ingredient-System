@@ -15,6 +15,7 @@ from .domain import DomainError
 from .models import Order, PalletSheet
 
 MAX_PALLETS = 99
+MAX_ORDER_NUMBERS_LEN = 200
 
 
 def _text(value, field: str, max_len: int) -> str:
@@ -38,6 +39,12 @@ def create_sheet(*, order_ids, ship_to, address, delivery_time, pallet_count, ac
     owners = {o.owner_id for o in orders}
     if len(owners) != 1:
         raise DomainError("mixed_owner", "一张板头纸只能放同一个货主的订单。")
+    order_numbers = " & ".join(o.number for o in orders)
+    if len(order_numbers) > MAX_ORDER_NUMBERS_LEN:
+        raise DomainError(
+            "order_numbers_too_long",
+            f"所选订单编号合并后超过 {MAX_ORDER_NUMBERS_LEN} 个字，请减少订单数量。",
+        )
     try:
         count = int(pallet_count)
     except (TypeError, ValueError):
@@ -47,7 +54,7 @@ def create_sheet(*, order_ids, ship_to, address, delivery_time, pallet_count, ac
     with transaction.atomic():
         sheet = PalletSheet.objects.create(
             owner=orders[0].owner,
-            order_numbers=" & ".join(o.number for o in orders)[:200],
+            order_numbers=order_numbers,
             ship_to=_text(ship_to, "收貨客戶", 100),
             address=_text(address, "送貨地址", 200),
             delivery_time=_text(delivery_time, "送貨時間", 60),
