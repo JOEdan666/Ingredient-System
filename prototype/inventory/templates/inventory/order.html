@@ -10,33 +10,29 @@
   {% if sheets %}<ul class="sheet-list">{% for s in sheets %}<li><a href="{% url 'pallet_sheet_print' s.pk %}">{{ s.created_at|date:"Y-m-d H:i" }} · {{ s.ship_to }} · 共{{ s.pallet_count }}板 · {{ s.order_numbers }}</a> <span class="muted">{{ s.created_by }}</span></li>{% endfor %}</ul>{% endif %}
 </div>
 
-{% for l in order.lines %}
-<div class="card">
-  <strong>第 {{ l.line_no }} 行 · 商品 {{ l.product }}</strong>{% if l.source_line %} <span class="muted">原件{{ l.source_line }}</span>{% endif %} {% if l.requested_expiry %}<span class="tag">指定效期 {{ l.requested_expiry|date:"Y-m-d" }}</span>{% endif %}
-  <table>
-    <tr><th class="num">订购</th><th class="num">未选货位</th><th class="num">已分配未发</th><th class="num">已发</th><th class="num">已取消</th></tr>
-    <tr><td class="num">{{ l.numbers.ordered }}</td><td class="num">{{ l.numbers.unallocated }}</td><td class="num">{{ l.numbers.allocated_open }}</td>
-      <td class="num">{{ l.numbers.shipped }}</td><td class="num">{{ l.numbers.cancelled }}</td></tr>
-  </table>
+{% if all_allocated %}<div class="okbar">✅ 全部配好，可以发货（在下面各行点「确认发货」）。</div>
+{% elif short %}<div class="warnbar">还有 {{ short }} 行没配够。可以先保存已经填好的，库存到了再补。</div>{% endif %}
 
-  {% if l.numbers.unallocated %}
-  <h2>员工选批次与货位（本行还需分配 {{ l.numbers.unallocated }}）</h2>
-  <form method="post" action="{% url 'allocate' order.id %}">{% include "inventory/_op.html" %}
-    <input type="hidden" name="line_id" value="{{ l.id }}">
-    <table>
-      <tr><th>批次</th><th>批号</th><th>效期</th><th>货位</th><th class="num">可分配</th><th>本次分配</th></tr>
-      {% for c in l.candidates %}
-      <tr><td>{{ c.lot }}</td><td>{{ c.external_lot }}</td><td>{{ c.expiry|date:"Y-m-d"|default:"未知" }}</td>
-        <td>{{ c.location }} <span class="muted">{{ c.location_kind }}</span></td><td class="num">{{ c.free }}</td>
-        <td><input type="number" name="pick_{{ c.id }}" min="0" max="{{ c.free }}"></td></tr>
-      {% empty %}<tr><td colspan="6" class="muted">没有符合条件的合格库存（同货主、同商品{% if l.requested_expiry %}、同效期{% endif %}）。</td></tr>{% endfor %}
-    </table>
-    <button>保存分配</button> <span class="muted">系统不自动按效期先出（FEFO），由员工决定。</span>
-  </form>
+{% if attention or ready %}
+<form method="post" action="{% url 'allocate' order.id %}" class="card alloc-form">
+  <h2>选批次与货位（整张订单一次保存）</h2>
+  <p class="muted">系统不自动按效期先出（FEFO），由员工决定；只有订单指定了效期、且只有一处同效期库存够用时，才先帮你填好。</p>
+  {% for l in attention %}{% include "inventory/_alloc_line.html" %}{% endfor %}
+  {% if ready %}
+  <details class="fold"><summary>{{ ready|length }} 行已配好（已折叠，点开可查看或修改）</summary>
+    {% for l in ready %}{% include "inventory/_alloc_line.html" %}{% endfor %}
+  </details>
   {% endif %}
+  <div class="filter-actions">{% include "inventory/_op.html" %}<button type="submit">保存分配（整张订单）</button></div>
+</form>
+{% endif %}
+
+<h2>各行：已分配、发货、取消</h2>
+{% for l in order.lines %}
+<details class="card oline">
+  <summary><strong>第 {{ l.line_no }} 行 · 商品 {{ l.product }}</strong> <span class="muted">订购 {{ l.numbers.ordered }} · 未选货位 {{ l.numbers.unallocated }} · 已分配未发 {{ l.numbers.allocated_open }} · 已发 {{ l.numbers.shipped }} · 已取消 {{ l.numbers.cancelled }}</span></summary>
 
   {% if l.allocations %}
-  <h2>已分配</h2>
   <form method="post" action="{% url 'ship' order.id %}">{% include "inventory/_op.html" %}
     <table>
       <tr><th>批次</th><th>效期</th><th>货位</th><th class="num">分配</th><th class="num">已发</th><th class="num">已释放</th><th class="num">未发</th><th>分配人</th><th>本次发货</th></tr>
@@ -48,17 +44,28 @@
     </table>
     <button>确认发货</button>
   </form>
-  {% endif %}
+  {% else %}<p class="muted">还没分配批次/货位。</p>{% endif %}
 
   {% if l.numbers.cancellable %}
-  <h2>逐行取消（最多 {{ l.numbers.cancellable }}，已发出的不能取消）</h2>
   <form method="post" action="{% url 'cancel_line' order.id %}" class="inline">{% include "inventory/_op.html" %}
     <input type="hidden" name="line_id" value="{{ l.id }}">
+    <span class="muted">逐行取消（最多 {{ l.numbers.cancellable }}，已发出的不能取消）</span>
     <input type="number" name="qty" min="1" max="{{ l.numbers.cancellable }}" placeholder="空=全部剩余">
     <select name="reason">{% for v, t in reasons %}<option value="{{ v }}">{{ t }}</option>{% endfor %}</select>
     <button class="danger">取消这一行</button>
   </form>
   {% endif %}
-</div>
+</details>
 {% endfor %}
+<script>
+function allocSum(input) {
+  const box = input.closest(".aline"), need = +box.dataset.need;
+  let sum = 0, bad = false;
+  box.querySelectorAll("input[type=number]").forEach(i => { const v = i.value.trim(); if (v === "") return; if (/^\d+$/.test(v)) sum += +v; else bad = true; });
+  box.querySelector(".entered").textContent = bad ? "?" : sum;
+  const gap = need - sum;
+  box.querySelector(".gapmsg").textContent = bad ? "数量看不懂" : gap > 0 ? "还差 " + gap : gap < 0 ? "多填了 " + (-gap) : "已配好";
+  box.classList.toggle("diff", bad || gap !== 0);
+}
+</script>
 {% endblock %}
