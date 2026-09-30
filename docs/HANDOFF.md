@@ -8,6 +8,10 @@
 
 1. 高「13 条并发测试没有覆盖两个 `move_stock` 同时争用同一个来源余额；删掉 `_lock_balances()` 的 `select_for_update()` 后全部测试仍通过」——**接受并修**。补充同一来源余额并发移往两个不同货位的锁等待/余量拒绝场景，并增加显式禁用余额行锁的反例；同步提高 JUnit 最少并发用例数。修复后须在 PostgreSQL 上重跑完整领域测试、并发子集和计数器，再交独立验收审查者复核最终提交。
 
+### 审查叫停回应（第 2 轮：Codex 审 `710e40f` → COULD_NOT_VERIFY）
+
+1. 「当前 SHA 尚未推送，无法取得目标 PostgreSQL 18.6 CI」——**接受并补证**。审查者已重跑本机 PostgreSQL 14.22 的 45 条全集、15 条并发、JUnit 计数以及其它仓库回归，未发现可复现代码缺陷；但本机 14 不能替代目标 18.6。先提交本回应并推送分支触发 `.github/workflows/db-tests.yml`，等当前最终 SHA 的 `postgres-domain` 成功后，再运行同一独立验收脚本。CI 与复审均通过前保持 `review`，不标 `done`。
+
 - 实测（本机 PostgreSQL 14.22，合成数据）：`application` 全集 **45 passed**；并发子集 **15 passed, 30 deselected**；JUnit 校验 `executed=15, expected>=15, failed=0`。临时去掉余额 `select_for_update()` 后，新测试按预期失败，并检测到 `on_hand 4 ≠ 流水合计 -2`；恢复锁后重新全绿。额外回归：`prototype` **61 passed**、`import-spike` **44 passed**、`scripts/check_project.py` PASS、`git diff --check` 无输出。
 - 边界：这是技术并发门禁修复，不改变 Q03/Q04 候选业务规则，也不构成客户业务、Windows、生产或真实数据验收。
 - 下一动作：提交当前修复并运行 `scripts/run_acceptance_review.sh`；PASS 前 T06a 保持 `review`，之后推送 draft PR，由有权集成者决定是否合并。
