@@ -10,7 +10,7 @@
 set -u
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 AGENT="$REPO/.codex/agents/acceptance-reviewer.toml"
-STAMP="$(date +%Y%m%d-%H%M%S)"
+STAMP="$(date +%Y%m%d-%H%M%S)-$$"
 OUT="/private/tmp/ingredient-acceptance-report-$STAMP.txt"
 LOG="/private/tmp/ingredient-acceptance-log-$STAMP.txt"
 MODE="${REVIEWER:-auto}"
@@ -78,19 +78,32 @@ if ! /Users/fangyuan/ai-hub/shared-skills/see-it-run/shot.sh "data:text/html,<p>
 fi
 rm -f "$probe"
 
+# 审查副本是 git clone，只含已提交内容：工作区有未提交改动就拒绝，免得「通过」只覆盖旧提交却记在当前分支上
+if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
+  echo "ACCEPTANCE_VERDICT: NONE 工作区有未提交改动。审查只看已提交内容，请先提交（或清理）再跑。" | tee -a "$LOG"
+  exit 3
+fi
+
+# 同一分支同一时间只允许一个审查在跑，免得两个互相覆盖闸门和报告
+LOCK="/private/tmp/ingredient-review-lock-$(git -C "$REPO" rev-parse --abbrev-ref HEAD | tr '/' '_')"
+if ! mkdir "$LOCK" 2>/dev/null; then
+  echo "ACCEPTANCE_VERDICT: NONE 这个分支已经有一个审查在跑（锁 ${LOCK}）。等它结束；若确认没有在跑，删掉这个目录再试。" | tee -a "$LOG"
+  exit 3
+fi
+WORK="/private/tmp/ingredient-review-$STAMP"
+trap 'rm -rf "$WORK"; rmdir "$LOCK" 2>/dev/null' EXIT
+
 before="$(git -C "$REPO" rev-parse HEAD 2>/dev/null) $(git -C "$REPO" status --porcelain 2>/dev/null | shasum | cut -c1-12)"
 branch="$(git -C "$REPO" rev-parse --abbrev-ref HEAD)"
 head_sha="$(git -C "$REPO" rev-parse HEAD)"
 
 # 审查者在一次性副本里跑：它有完全权限（无头 Chrome 需要），指令里的「不许改」只是请求，
 # 副本保证它就算改了也碰不到真仓库；跑完删掉副本。
-WORK="/private/tmp/ingredient-review-$STAMP"
 git clone -q --no-hardlinks "$REPO" "$WORK" || { echo "ACCEPTANCE_VERDICT: NONE 建审查副本失败" | tee -a "$LOG"; exit 3; }
 git -C "$WORK" fetch -q "$REPO" "+refs/remotes/origin/*:refs/remotes/origin/*" 2>/dev/null
 git -C "$WORK" checkout -q -B "$branch" "$head_sha"
 [ -e "$REPO/prototype/.venv" ] && ln -s "$(cd "$REPO/prototype/.venv" && pwd -P)" "$WORK/prototype/.venv"
 REVIEW_DIR="$WORK"
-trap 'rm -rf "$WORK"' EXIT
 
 case "$MODE" in
   claude) run_claude ;;
@@ -105,7 +118,9 @@ case "$MODE" in
 esac
 
 # 报告里出现真实文件名（含客户名、单号）一律替换掉，再保存/抄进闸门
-python3 - "$OUT" "$HOME/agent-archive/ingredient-approved-files.txt" <<'PY'
+APPROVED="$HOME/agent-archive/ingredient-approved-files.txt"
+REDACTED=yes; [ -f "$APPROVED" ] || REDACTED=no   # 名单不在就无法脱敏：闸门里不放正文
+python3 - "$OUT" "$APPROVED" <<'PY'
 import os, sys
 out, lst = sys.argv[1], sys.argv[2]
 if os.path.exists(out) and os.path.exists(lst):
@@ -131,10 +146,10 @@ case "$(echo "$line" | awk '{print $2}')" in
 esac
 reported="$(echo "$line" | awk '{print $3}')"
 if [ "$status" = "PASS" ] && [ "$reported" != "$head_sha" ]; then  # 结论必须写明就是这个版本
-  status="BLOCKED:SHA_MISMATCH"; echo "警告：审查者报告的版本 $reported 不是当前 HEAD $head_sha，不记为通过。" | tee -a "$LOG"
+  status="BLOCKED:SHA_MISMATCH"; echo "警告：审查者报告的版本 $reported 不是当前 HEAD ${head_sha}，不记为通过。" | tee -a "$LOG"
 fi
 if [ "$before" != "$after" ]; then
-  status="BLOCKED:REPO_CHANGED"; echo "警告：审查期间仓库状态变了（$before → $after），结论作废，请重跑。" | tee -a "$LOG"
+  status="BLOCKED:REPO_CHANGED"; echo "警告：审查期间仓库状态变了（${before} → ${after}），结论作废，请重跑。" | tee -a "$LOG"
 fi
 
 if [ "$branch" = "HEAD" ]; then  # 游离检出没有分支，不写闸门，免得生成 HEAD.md 这种无主记录
@@ -144,7 +159,7 @@ else
   gate_dir="$HOME/agent-archive/review-gate/Ingredient-System"; mkdir -p "$gate_dir"
   gate="$gate_dir/${branch//\//__}.md"
   { echo "status: $status"; echo "branch: $branch"; echo "sha: $head_sha"
-    echo "time: $(date '+%Y-%m-%d %H:%M')"; echo "reviewer: ${REVIEWED_BY}"; echo "reviewer_log: $LOG"; echo "report: $OUT"; echo; cat "$OUT"; } > "$gate"
+    echo "time: $(date '+%Y-%m-%d %H:%M')"; echo "reviewer: ${REVIEWED_BY}"; echo "reviewer_log: $LOG"; echo "report: $OUT"; echo; if [ "$REDACTED" = yes ]; then cat "$OUT"; else echo "（真实文件名单缺失，报告未脱敏，正文只保存在本机 ${OUT}，没有放进闸门）"; head -1 "$OUT"; fi; } > "$gate"
   cp "$gate" "$gate_dir/history-$STAMP-${branch//\//__}.md"
   echo "闸门: $gate ($status)"
 fi
