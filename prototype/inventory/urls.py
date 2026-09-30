@@ -26,4 +26,7 @@ urlpatterns = [
     path("pallet-sheets/<int:sheet_id>/print/", views.pallet_sheet_print, name="pallet_sheet_print"),
     path("history/", views.history_page, name="history"),
     path("staff/", views.staff_page, name="staff"),
+    path("export/inventory/", views.export_inventory, name="export_inventory"),
+    path("export/movements/", views.export_movements, name="export_movements"),
+    path("export/orders/", views.export_orders, name="export_orders"),
 ]

@@ -1,5 +1,14 @@
 # 当前交接
 
+## 2026-10-01 Claude Code 本机：T10 数据导出 Excel（只读）
+
+- 分支 `agent/claude/T10-data-export`（基于 main `0d65c6b`，并合并了 `agent/claude/T06c-mark-done` 的「T06c 标 done」提交，因项目检查要求依赖任务已 done）。用户批了验收单（4 条）后开工。
+- 做了什么：库存页、出库页、历史页各一个「导出 Excel」。库存按页面筛选条件导出（批次货位明细 + 商品汇总 + 说明页）；库存流水、订单各一份。全部 GET、只读；新增 `prototype/inventory/exports.py` 与 `tests/test_exports.py`。
+- 技术决定（未问用户）：用已有的 openpyxl；所有文本按文本写（openpyxl 会把 = 开头当公式，导入文件里的商品名可能以任何字符开头）；「可用」口径在说明页标明是 D07 候选、待 Q03；按钮放页面标题右侧（放筛选栏里会把「筛选库存」挤成竖条，已发现并改掉）。
+- 实测见 `docs/tasks.json` T10 evidence：pytest 124 passed；反例（删掉按文本写）测试失败；本机合成库真下载三个文件逐格核对；三页截图已看。
+- 未验证：Windows 上的文件名/Excel 打开效果（T07）；真实客户数据；大数据量耗时。
+- 下一动作：跑 `scripts/run_acceptance_review.sh`；无论结论都推送并开 draft PR（PR 里写明结论）。推送等用户醒来同意。
+
 ## 2026-10-01 Claude Code 本机：T06c 整张订单一次发货
 
 - 分支 `agent/claude/T06c-ship-whole-order`（基于 main `46186e4`，#19 合并后才开，避免冲突）。

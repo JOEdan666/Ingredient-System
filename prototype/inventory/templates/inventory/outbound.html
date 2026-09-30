@@ -1,7 +1,7 @@
 {% extends "inventory/base.html" %}
 {% block title %}出库{% endblock %}
 {% block content %}
-<div class="page-head"><div><div class="eyebrow">Outbound</div><h1>订单与出库</h1><p class="steps"><strong>接单占用</strong> → 选择批次与货位 → 确认发货</p></div></div>
+<div class="page-head"><div><div class="eyebrow">Outbound</div><h1>订单与出库</h1><p class="steps"><strong>接单占用</strong> → 选择批次与货位 → 确认发货</p></div><a class="dl" href="{% url 'export_orders' %}" title="全部订单，每个订单行一行；只读">导出订单 Excel</a></div>
 <p class="note">接单时立即占用、减少「可用」（D07）；实物要到发货才减少，发货不会再扣一次可用。可用不够时拒绝接单（候选规则，待业务确认是否允许缺货接单）。</p>
 
 <h2>接单</h2>
