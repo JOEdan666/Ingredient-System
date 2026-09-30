@@ -17,8 +17,9 @@
 1. 低「任务证据和旧状态段仍写 13 条并发测试，和当前 15 条不一致」——**接受并修**。把 `docs/tasks.json` 的当前证据改为 15 条/15 通过；把下方历史状态明确标为“PR #12 合并当时”，同时补上 2026-09-30 修复后的当前计数，避免旧数字被误读为当前结论。另将 PostgreSQL 工作流的 push 分支加入当前收尾分支，使最终 SHA 能自动取得 PostgreSQL 18.6 证据，不再依赖人工 `workflow_dispatch`。修复后仍按当前最终 SHA 重跑项目检查、数据库/并发回归和独立验收。
 
 - 实测（本机 PostgreSQL 14.22，合成数据）：`application` 全集 **45 passed**；并发子集 **15 passed, 30 deselected**；JUnit 校验 `executed=15, expected>=15, failed=0`。临时去掉余额 `select_for_update()` 后，新测试按预期失败，并检测到 `on_hand 4 ≠ 流水合计 -2`；恢复锁后重新全绿。额外回归：`prototype` **61 passed**、`import-spike` **44 passed**、`scripts/check_project.py` PASS、`git diff --check` 无输出。
+- 目标版本证据：最终代码提交 `5711c7b` 的 [PostgreSQL 18.6 Actions run 36717264559](https://github.com/JOEdan666/Ingredient-System/actions/runs/36717264559) 成功；独立验收审查同一提交并明确给出 `ACCEPTANCE_VERDICT: PASS 5711c7b6e55a33d6ee96bdbe7d9a55b9875aca52`，未发现可复现缺陷。下面只补写证据，不改代码；交接提交仍须按新 SHA 再跑项目检查和独立验收。
 - 边界：这是技术并发门禁修复，不改变 Q03/Q04 候选业务规则，也不构成客户业务、Windows、生产或真实数据验收。
-- 下一动作：提交当前修复并运行 `scripts/run_acceptance_review.sh`；PASS 前 T06a 保持 `review`，之后推送 draft PR，由有权集成者决定是否合并。
+- 下一动作：推送当前收尾分支并创建 draft PR，由有权集成者决定是否合并；本例程不自动合并。
 
 ## 2026-09-30 Claude Code 本机：T04e 文件真正可导入 + 独立验收闸门
 

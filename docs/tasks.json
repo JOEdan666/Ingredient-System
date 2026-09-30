@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-28",
+  "updated": "2026-09-30",
   "tasks": [
     {
       "id": "T01",
@@ -351,7 +351,8 @@
         "application/check_concurrency_junit.py (15 executed, 0 failed on local run)",
         ".github/workflows/db-tests.yml (PostgreSQL 18.6 target; Actions runs 36575919504 and 36576125734 succeeded; draft PR #12)",
         "docs/test-commands.md (exact setup, versions, commands, results, limitations)",
-        "2026-09-30 合并后审查修复：本机 PostgreSQL 14.22 上 application 全集 45 passed；并发子集 15 passed、30 deselected；JUnit 计数 executed=15, expected>=15, failed=0。临时去掉 StockBalance 的 select_for_update 后，新同源移位测试按预期失败，并复现余额 4 与流水合计 -2 不一致；恢复锁后全绿。目标 PostgreSQL 18.6 仍须由本分支 CI 和最终独立审查复核，不能据此声称客户业务验收。"
+        "2026-09-30 合并后审查修复：本机 PostgreSQL 14.22 上 application 全集 45 passed；并发子集 15 passed、30 deselected；JUnit 计数 executed=15, expected>=15, failed=0。临时去掉 StockBalance 的 select_for_update 后，新同源移位测试按预期失败，并复现余额 4 与流水合计 -2 不一致；恢复锁后全绿。",
+        "2026-09-30: 提交 5711c7b 的 PostgreSQL 18.6 Actions run 36717264559 成功；独立验收审查同一提交给出 ACCEPTANCE_VERDICT: PASS，未发现可复现缺陷。此证据仅证明合成数据技术并发门禁，不构成客户业务、Windows、生产或真实数据验收。"
       ]
     }
   ]
