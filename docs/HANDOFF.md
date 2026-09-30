@@ -14,8 +14,9 @@
 - **第 2 轮复审（`b7eff8f`）**：仍为 COULD_NOT_VERIFY、仍无代码/界面缺陷；理由是「无 Windows 证据」和「实际打印/存 PDF 未演练」。后者接受并补：新增 `scripts/print_page_check.py`（无头 Chrome 导出 PDF，报页数和每页末行；`… 2` 通过，`… 3` 失败退出 1，本机实测），并加入审查者的「打印页」关卡。前者仍是异议：Windows 归 T07，无法在这台 Mac 上产生证据。按 AGENTS.md「同一问题两次修不掉就停」，**不再第 3 次复审**，交用户决定是否接受「Windows 部分留在 T07」。
 - **定时开发者按叫停指令复审（`4cb3a21`）**：独立审查再次为 `COULD_NOT_VERIFY`，唯一原因仍是这台 Mac 无法提供 A12 的 Windows 证据；没有发现可复现代码或界面缺陷。本轮已补齐并由审查者亲自验证此前缺失的 PDF 证据：Chrome 导出 2 页成功，页末分别为「共2板 (1/2)」「共2板 (2/2)」；`shot.sh` 成功且截图已目视检查；库存指纹生成、重印前后均为 `balances=4 on_hand=37 allocated=0 movements=4 orders=1 notices=0 hash=df76440d0909d046`。接受「A12 整体仍未验收」这一结论，但不通过删除或放宽 Windows 验收来换 PASS；Windows 中文文件名、内容和实际打印继续由受 Q01 阻塞的 T07 处理。完整报告：`/private/tmp/ingredient-acceptance-report-20260930-143349.txt`。同一环境阻塞已重复，按 AGENTS.md 停止继续修补并交接。
 - **本轮审查叫停回应（Codex gpt-5.6-luna 审 `3307c21` → CHANGES_REQUESTED）**：接受「多张长订单号被 `[:200]` 静默截断」；这会让板头纸漏印部分订单号。修复为合并文本超过 200 字时整单拒绝并提示减少订单，不保存残缺快照；新增 6 张长订单、合计 255 字的回归测试，要求错误码 `order_numbers_too_long`、提示可见且数据库不生成板头纸。Windows 中文文件名、内容与实际打印仍接受为 A12 未验证项，继续留给 T07，不伪造本机证据。
+- **修复后独立验收（`c1c4c64`）**：`ACCEPTANCE_VERDICT: PASS`。审查者实跑 prototype `74 passed`、import-spike `44 passed`、项目检查 PASS、PDF 2 页、首次用户生成与重印、长订单号超限明确拒绝、截图目视检查和库存指纹不变；完整报告 `/private/tmp/ingredient-acceptance-report-20260930-151602.txt`。PASS 只覆盖 T04f 当前范围，Windows 中文文件名和实体打印仍未验证，归 T07。
 - 附带：第 2 轮 `shot.sh` 曾没跑完；`4cb3a21` 复审已成功运行并完成目视检查，此项已关闭。
-- 下一动作：保持 T04f 为 `review` 且闸门为非 PASS；待具备 Windows 目标环境并明确 Q01 后，由 T07 补中文文件名、内容和实际打印证据，再重跑独立验收。不要在此之前合并或声称 A12 已通过。
+- 下一动作：保持 T04f 为 `review` 和 PR #15 为 draft，由用户决定是否合并已通过的 T04f 范围；待具备 Windows 目标环境并明确 Q01 后，再由 T07 补中文文件名、内容和实体打印证据。不要把 T04f PASS 说成 A12 全部或 Windows 打印已通过。
 
 ## 2026-09-30 Claude Code 本机：T04e 文件真正可导入 + 独立验收闸门
 
