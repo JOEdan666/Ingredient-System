@@ -7,6 +7,11 @@
 - 改动：`PalletSheet` 表（迁移 0003，存填写时的快照）；`inventory/pallet_sheets.py`；订单页「打印板头纸」→ 填写页 → 打印页（按样本版式每板一页，浏览器打印/存 PDF）；订单页列出历次板头纸可重印。不读写任何库存表。
 - 实测：见 `docs/tasks.json` T04f evidence（73 passed、反例、真实数据演示库上点击生成并导出 PDF 2 页、库存指纹不变）。
 - 待问清单（不阻塞）：板头纸是否要印商品/箱数明细；专用标签纸尺寸（现按 A4）。
+
+### 审查叫停回应（Codex gpt-5.6-luna 审 `270f120` → COULD_NOT_VERIFY，无代码/界面缺陷）
+
+- 唯一理由「Windows target validation unavailable」——**有异议，附证据**：Windows 安装、中文文件名与打印属于 T07（`docs/tasks.json` T07 `blocked_by: Q01`，交付物写明「专用打印机适配暂缓，不要求打印验收阻塞试用」）；PROJECT.md 第一版目标第 6 项「专用打印集成以后确认」。T04f 只对 A12 中「重复导出不影响库存」负责，审查者已实测库存指纹不变。原先把整个 A12 挂在 T04f 上是我的登记错误，已改为不挂 A12 并在交付物里写明范围。
+- 附带：审查者提到 `shot.sh` 在它的环境里没跑完，但它用 drive.mjs 截图并逐张看过，不影响结论；下一轮留意是否复现。
 - 下一动作：跑 `scripts/run_acceptance_review.sh`，无论结论都推送开 draft PR（用户 2026-09-30 规则），PR 里写明结论。
 
 ## 2026-09-30 Claude Code 本机：T04e 文件真正可导入 + 独立验收闸门
