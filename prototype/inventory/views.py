@@ -12,9 +12,9 @@ from django.views.decorators.http import require_POST
 
 from . import domain, queries
 from .domain import DomainError
-from . import import_posting
+from . import import_posting, pallet_sheets
 from .import_preview import PreviewError, parse_upload, problem_summary, recheck
-from .models import Condition, ImportBatch, LineCancellation, Location, OrderLine, Owner
+from .models import Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet
 from .synthetic import load_synthetic_fixture
 
 SYNTHETIC_ACTORS = ["员工甲（合成）", "员工乙（合成）", "员工丙（合成）"]
@@ -278,11 +278,54 @@ def accept_order(request):
     return redirect("outbound")
 
 
+def pallet_sheet_form(request, order_id):
+    """Fill in and generate pallet header sheets (板头纸) for this order; never touches stock."""
+    order = Order.objects.select_related("owner").filter(pk=order_id).first()
+    if order is None:
+        raise Http404("订单不存在")
+    if request.method == "POST":
+        try:
+            sheet = pallet_sheets.create_sheet(
+                order_ids=request.POST.getlist("orders"), ship_to=request.POST.get("ship_to"),
+                address=request.POST.get("address"), delivery_time=request.POST.get("delivery_time"),
+                pallet_count=request.POST.get("pallet_count"), actor=request.POST.get("actor", ""),
+            )
+        except (DomainError, ValueError) as err:
+            messages.error(request, f"板头纸没有生成：{getattr(err, 'message', err)}")
+        else:
+            return redirect("pallet_sheet_print", sheet_id=sheet.pk)
+    last = order.pallet_sheets.order_by("-pk").first()
+    form = {
+        "orders": set(map(int, request.POST.getlist("orders"))) or {order.pk},
+        "ship_to": request.POST.get("ship_to", last.ship_to if last else ""),
+        "address": request.POST.get("address", last.address if last else ""),
+        "delivery_time": request.POST.get("delivery_time", last.delivery_time if last else ""),
+        "pallet_count": request.POST.get("pallet_count", last.pallet_count if last else 1),
+    }
+    return render(request, "inventory/pallet_sheet_form.html", _ctx(
+        request, order=order, form=form, suggest=pallet_sheets.suggestions(order.owner_id),
+        same_owner_orders=Order.objects.filter(owner=order.owner).order_by("-pk")[:20],
+        max_pallets=pallet_sheets.MAX_PALLETS,
+    ))
+
+
+def pallet_sheet_print(request, sheet_id):
+    sheet = PalletSheet.objects.filter(pk=sheet_id).first()
+    if sheet is None:
+        raise Http404("板头纸不存在")
+    back = sheet.orders.order_by("pk").first()
+    return render(request, "inventory/pallet_sheet_print.html",
+                  {"sheet": sheet, "pages": pallet_sheets.pages(sheet), "back": back})
+
+
 def order_page(request, order_id):
     detail = queries.order_detail(order_id)
     if detail is None:
         raise Http404("订单不存在")
-    return render(request, "inventory/order.html", _ctx(request, order=detail, reasons=LineCancellation.Reason.choices))
+    return render(request, "inventory/order.html", _ctx(
+        request, order=detail, reasons=LineCancellation.Reason.choices,
+        sheets=PalletSheet.objects.filter(orders__pk=order_id).order_by("-pk"),
+    ))
 
 
 @require_POST

@@ -379,3 +379,26 @@ class ImportBatch(models.Model):
     @property
     def ready(self):
         return bool(self.lines) and not self.batch_errors and self.blocked_count == 0
+
+
+class PalletSheet(models.Model):
+    """A set of pallet header sheets (板头纸) for one delivery.
+
+    Everything printed is stored as typed (a snapshot), so a reprint shows the
+    same text even if an order or customer record changes later.  Creating or
+    printing a sheet never touches stock.
+    """
+
+    owner = models.ForeignKey(Owner, on_delete=models.PROTECT)
+    orders = models.ManyToManyField(Order, related_name="pallet_sheets")
+    order_numbers = models.CharField(max_length=200)  # printed text, e.g. "A & B"
+    ship_to = models.CharField(max_length=100)  # 收貨客戶
+    address = models.CharField(max_length=200)  # 送貨地址
+    delivery_time = models.CharField(max_length=60)  # 送貨時間, free text as on the paper form
+    pallet_count = models.PositiveSmallIntegerField()
+    created_by = models.CharField(max_length=40)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=Q(pallet_count__gte=1) & Q(pallet_count__lte=99),
+                                              name="pallet_count_1_99")]

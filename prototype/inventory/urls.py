@@ -21,5 +21,7 @@ urlpatterns = [
     path("outbound/<int:order_id>/allocate/", views.allocate, name="allocate"),
     path("outbound/<int:order_id>/ship/", views.ship, name="ship"),
     path("outbound/<int:order_id>/cancel/", views.cancel_line, name="cancel_line"),
+    path("outbound/<int:order_id>/pallet-sheet/", views.pallet_sheet_form, name="pallet_sheet_form"),
+    path("pallet-sheets/<int:sheet_id>/print/", views.pallet_sheet_print, name="pallet_sheet_print"),
     path("history/", views.history_page, name="history"),
 ]

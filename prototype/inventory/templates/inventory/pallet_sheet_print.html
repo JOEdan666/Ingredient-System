@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>板頭紙 {{ sheet.order_numbers }}</title>
+<style>
+  /* Follows the customer's Word sample: A4 portrait, 1in top/bottom and 1.25in left/right margins,
+     customer 36pt centred, other lines 28pt. One pallet per page. */
+  @page { size: A4 portrait; margin: 25.4mm 31.75mm; }
+  body { margin: 0; font-family: "PMingLiU", "MingLiU", "Microsoft JhengHei", "PingFang TC", serif; color: #000; background: #f3f5f4; }
+  .toolbar { position: sticky; top: 0; background: #163a34; color: #fff; padding: 10px 16px; display: flex; gap: 14px; align-items: center; font: 14px system-ui, sans-serif; }
+  .toolbar a { color: #c7ded6; } .toolbar button { font: inherit; padding: 6px 14px; border: 0; border-radius: 6px; background: #fff; color: #163a34; font-weight: 700; cursor: pointer; }
+  .sheet { background: #fff; width: 210mm; min-height: 297mm; box-sizing: border-box; padding: 25.4mm 31.75mm; margin: 16px auto; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  .sheet p { margin: 0 0 6pt; font-size: 28pt; line-height: 1.35; overflow-wrap: anywhere; }
+  .sheet p.customer { font-size: 36pt; text-align: center; }
+  .sheet p.blank { height: 28pt; }
+  @media print {
+    body { background: #fff; } .toolbar { display: none; }
+    .sheet { width: auto; min-height: 0; padding: 0; margin: 0; box-shadow: none; page-break-after: always; break-after: page; }
+    .sheet:last-child { page-break-after: auto; break-after: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <strong>板頭紙 · 共 {{ sheet.pallet_count }} 頁</strong>
+  <button type="button" onclick="window.print()">打印 / 存成 PDF</button>
+  {% if back %}<a href="{% url 'order_detail' back.pk %}">← 返回订单</a>{% endif %}
+  <span>只是标签，不改库存 · {{ sheet.created_by }} {{ sheet.created_at|date:"Y-m-d H:i" }}</span>
+</div>
+{% for page in pages %}
+<section class="sheet" aria-label="第 {{ page.index }} 板">
+  <p class="customer">收貨客戶: {{ sheet.ship_to }}</p>
+  <p>送貨地址: {{ sheet.address }}</p>
+  <p>送貨時間: {{ sheet.delivery_time }}</p>
+  <p class="blank"></p>
+  <p>訂單編號:</p>
+  <p>{{ sheet.order_numbers }}</p>
+  <p>共{{ page.total }}板 ({{ page.index }}/{{ page.total }})</p>
+</section>
+{% endfor %}
+</body>
+</html>
