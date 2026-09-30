@@ -15,7 +15,7 @@ from .domain import DomainError
 from .receiving_batch import LineErrors
 from . import allocation_batch, folders, import_posting, pallet_sheets, receiving_batch, staff
 from .import_preview import PreviewError, parse_upload, problem_summary, recheck
-from .models import Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet, Staff
+from .models import Allocation, Condition, ImportBatch, LineCancellation, Location, Order, OrderLine, Owner, PalletSheet, Staff
 from .synthetic import load_synthetic_fixture
 
 MAX_UPLOAD_BYTES = 15 * 1024 * 1024
@@ -370,10 +370,11 @@ def pallet_sheet_print(request, sheet_id):
                   {"sheet": sheet, "pages": pallet_sheets.pages(sheet), "back": back})
 
 
-def order_page(request, order_id, *, posted=None, errors=None, status=200):
+def order_page(request, order_id, *, posted=None, errors=None, status=200, ship_posted=False, ship_errors=None):
     detail = queries.order_detail(order_id)
     if detail is None:
         raise Http404("订单不存在")
+    alloc_posted = None if ship_posted else posted  # a failed shipment must not blank the allocation form
     errors, attention, ready, short = errors or {}, [], [], 0
     for l in detail["lines"]:
         need = l["numbers"]["unallocated"]
@@ -382,18 +383,41 @@ def order_page(request, order_id, *, posted=None, errors=None, status=200):
         suggested = allocation_batch.prefill(l)
         for c in l["candidates"]:
             key = f"pick_{l['id']}_{c['id']}"
-            c["value"] = posted.get(key, "") if posted is not None else (str(suggested[c["id"]]) if c["id"] in suggested else "")
+            c["value"] = alloc_posted.get(key, "") if alloc_posted is not None else (str(suggested[c["id"]]) if c["id"] in suggested else "")
         entered = sum(int(c["value"]) for c in l["candidates"] if str(c["value"]).strip().isdigit())
         l["need"], l["entered"], l["gap"], l["error"] = need, entered, need - entered, errors.get(l["id"], "")
-        l["prefilled"] = bool(suggested) and posted is None
+        l["prefilled"] = bool(suggested) and alloc_posted is None
         (ready if l["gap"] == 0 and not l["error"] else attention).append(l)
         short += l["gap"] > 0
+    ship_rows, ship_attention, ship_ready = _ship_rows(detail, posted if ship_posted else None, ship_errors or {})
+    remaining = sum(max(0, l["numbers"]["ordered"] - l["numbers"]["cancelled"] - l["numbers"]["shipped"])
+                    for l in detail["lines"])
     return render(request, "inventory/order.html", _ctx(
         request, order=detail, reasons=LineCancellation.Reason.choices,
         sheets=PalletSheet.objects.filter(orders__pk=order_id).order_by("-pk"),
         attention=attention, ready=ready, short=short,
         all_allocated=not attention and not ready,
+        ship_attention=ship_attention, ship_ready=ship_ready, ship_open=bool(ship_rows),
+        remaining=remaining, all_shipped=remaining == 0,
     ), status=status)
+
+
+def _ship_rows(detail, posted, errors):
+    """One row per allocation that still has goods to ship; default = ship everything allocated."""
+    rows = []
+    for l in detail["lines"]:
+        for a in l["allocations"]:
+            if not a["open"]:
+                continue
+            key = f"ship_{a['id']}"
+            value = posted.get(key, "") if posted is not None else str(a["open"])
+            row = dict(a, line_no=l["line_no"], product=l["product"], key=key, value=value,
+                       error=errors.get(a["id"], ""))
+            row["left"] = a["open"] - int(value) if str(value).strip().isdigit() else None
+            rows.append(row)
+    attention = [r for r in rows if r["error"] or r["left"] != 0]
+    ready = [r for r in rows if not (r["error"] or r["left"] != 0)]
+    return rows, attention, ready
 
 
 @require_POST
@@ -420,16 +444,42 @@ def allocate(request, order_id):
 
 @require_POST
 def ship(request, order_id):
-    items = []
+    """Whole-order shipment: every row checked first, then one domain.ship call (one transaction)."""
+    open_allocs = {a.pk: a for a in Allocation.objects.filter(order_line__order_id=order_id)}
+    items, errors = [], {}
+    for key, value in request.POST.items():
+        if not key.startswith("ship_"):
+            continue
+        raw_id, text = key[5:], value.strip()
+        if not raw_id.isdigit() or int(raw_id) not in open_allocs:
+            messages.error(request, "整张订单没有发货：有一项分配不属于这张订单。")
+            return order_page(request, order_id, posted=request.POST, status=400, ship_posted=True)
+        a = open_allocs[int(raw_id)]
+        if text == "" or text == "0":
+            continue
+        if not text.isdigit():
+            errors[a.pk] = "发货数量必须是 0 或正整数"
+        elif int(text) > a.qty_open:
+            errors[a.pk] = f"多发了 {int(text) - a.qty_open}（这项只分配了 {a.qty_open} 件未发）"
+        else:
+            items.append({"allocation_id": a.pk, "qty": int(text)})
+    if errors:
+        messages.error(request, f"整张订单没有发货：有 {len(errors)} 项需要改。")
+        return order_page(request, order_id, posted=request.POST, status=400, ship_posted=True, ship_errors=errors)
+    if not items:
+        messages.error(request, "整张订单没有发货：每一项都是 0，没有东西可以发。")
+        return order_page(request, order_id, posted=request.POST, status=400, ship_posted=True)
     try:
-        for key, value in request.POST.items():
-            if key.startswith("ship_") and value.strip():
-                q = _int(value, "发货数量")
-                if q:
-                    items.append({"allocation_id": _int(key[5:], "分配记录编号"), "qty": q})
-        _submit(request, "发货", domain.ship, order_id=order_id, items=items)
+        res = domain.ship(operation_id=request.POST.get("operation_id", ""),
+                          actor=staff.check_actor(request.POST.get("actor", "")), order_id=order_id, items=items)
     except DomainError as err:
-        messages.error(request, f"发货被拒绝：{err.message}")
+        messages.error(request, f"整张订单没有发货：{err.message}")
+        return order_page(request, order_id, posted=request.POST, status=400, ship_posted=True)
+    total = sum(i["qty"] for i in items)
+    if res.replayed:
+        messages.warning(request, "同一张发货单重复提交，已按第一次的结果处理，没有再发一次。")
+    else:
+        messages.success(request, f"发货完成：{len(items)} 项，共 {total} 件。")
     return redirect("order_detail", order_id=order_id)
 
 

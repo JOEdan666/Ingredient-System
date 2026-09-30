@@ -10,8 +10,9 @@
   {% if sheets %}<ul class="sheet-list">{% for s in sheets %}<li><a href="{% url 'pallet_sheet_print' s.pk %}">{{ s.created_at|date:"Y-m-d H:i" }} · {{ s.ship_to }} · 共{{ s.pallet_count }}板 · {{ s.order_numbers }}</a> <span class="muted">{{ s.created_by }}</span></li>{% endfor %}</ul>{% endif %}
 </div>
 
-{% if all_allocated %}<div class="okbar">✅ 全部配好，可以发货（在下面各行点「确认发货」）。</div>
-{% elif short %}<div class="warnbar">还有 {{ short }} 行没配够。可以先保存已经填好的，库存到了再补。</div>{% endif %}
+{% if all_shipped %}<div class="okbar">✅ 已全部发货。</div>
+{% elif all_allocated %}<div class="okbar">✅ 全部配好，可以发货（下方「整张发货」）。还有 {{ remaining }} 件未发。</div>
+{% elif short %}<div class="warnbar">还有 {{ short }} 行没配够。可以先保存已经填好的，库存到了再补。还有 {{ remaining }} 件未发。</div>{% endif %}
 
 {% if attention or ready %}
 <form method="post" action="{% url 'allocate' order.id %}" class="card alloc-form">
@@ -27,23 +28,36 @@
 </form>
 {% endif %}
 
-<h2>各行：已分配、发货、取消</h2>
+{% if ship_open %}
+<form method="post" action="{% url 'ship' order.id %}" class="card ship-form">
+  <h2>整张发货</h2>
+  <p class="muted">默认按已分配的数量全部发出；这次只发一部分的，改数量就行，剩下的留到下次。</p>
+  <table class="rtable"><colgroup><col style="width:8%"><col style="width:11%"><col style="width:10%"><col style="width:11%"><col style="width:7%"><col style="width:8%"><col style="width:11%"><col style="width:16%"><col style="width:18%"></colgroup>
+    <thead><tr><th>行</th><th>商品</th><th>货位</th><th>效期</th><th>批次</th><th class="num">已分配未发</th><th>本次发货</th><th></th><th></th></tr></thead>
+    <tbody>{% for r in ship_attention %}{% include "inventory/_ship_row.html" %}{% endfor %}</tbody>
+  </table>
+  {% if ship_ready %}
+  <details class="fold"><summary>{{ ship_ready|length }} 项按分配数量发货（已折叠，点开可查看或修改）</summary>
+    <table class="rtable"><colgroup><col style="width:8%"><col style="width:11%"><col style="width:10%"><col style="width:11%"><col style="width:7%"><col style="width:8%"><col style="width:11%"><col style="width:16%"><col style="width:18%"></colgroup><tbody>{% for r in ship_ready %}{% include "inventory/_ship_row.html" %}{% endfor %}</tbody></table>
+  </details>
+  {% endif %}
+  <div class="filter-actions">{% include "inventory/_op.html" %}<button type="submit">确认发货（整张订单）</button></div>
+</form>
+{% endif %}
+
+<h2>各行：分配记录、取消</h2>
 {% for l in order.lines %}
 <details class="card oline">
   <summary><strong>第 {{ l.line_no }} 行 · 商品 {{ l.product }}</strong> <span class="muted">订购 {{ l.numbers.ordered }} · 未选货位 {{ l.numbers.unallocated }} · 已分配未发 {{ l.numbers.allocated_open }} · 已发 {{ l.numbers.shipped }} · 已取消 {{ l.numbers.cancelled }}</span></summary>
 
   {% if l.allocations %}
-  <form method="post" action="{% url 'ship' order.id %}">{% include "inventory/_op.html" %}
     <table>
-      <tr><th>批次</th><th>效期</th><th>货位</th><th class="num">分配</th><th class="num">已发</th><th class="num">已释放</th><th class="num">未发</th><th>分配人</th><th>本次发货</th></tr>
+      <tr><th>批次</th><th>效期</th><th>货位</th><th class="num">分配</th><th class="num">已发</th><th class="num">已释放</th><th class="num">未发</th><th>分配人</th></tr>
       {% for a in l.allocations %}
       <tr><td>{{ a.lot }}</td><td>{{ a.expiry|date:"Y-m-d"|default:"未知" }}</td><td>{{ a.location }}</td><td class="num">{{ a.allocated }}</td>
-        <td class="num">{{ a.shipped }}</td><td class="num">{{ a.released }}</td><td class="num">{{ a.open }}</td><td>{{ a.by }}</td>
-        <td>{% if a.open %}<input type="number" name="ship_{{ a.id }}" min="0" max="{{ a.open }}" value="{{ a.open }}">{% endif %}</td></tr>
+        <td class="num">{{ a.shipped }}</td><td class="num">{{ a.released }}</td><td class="num">{{ a.open }}</td><td>{{ a.by }}</td></tr>
       {% endfor %}
     </table>
-    <button>确认发货</button>
-  </form>
   {% else %}<p class="muted">还没分配批次/货位。</p>{% endif %}
 
   {% if l.numbers.cancellable %}
@@ -58,6 +72,12 @@
 </details>
 {% endfor %}
 <script>
+function shipLeft(input) {
+  const tr = input.closest("tr"), open = +tr.dataset.open, v = input.value.trim(), cell = tr.querySelector(".left");
+  const left = /^\d+$/.test(v) ? open - +v : null;
+  cell.textContent = left === null ? "数量看不懂" : left > 0 ? "这次少发 " + left + "，留下次" : left < 0 ? "多发了 " + (-left) : "";
+  tr.classList.toggle("diff", left !== 0);
+}
 function allocSum(input) {
   const box = input.closest(".aline"), need = +box.dataset.need;
   let sum = 0, bad = false;
