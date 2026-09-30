@@ -1,19 +1,19 @@
 {% extends "inventory/base.html" %}
 {% block title %}库存{% endblock %}
 {% block content %}
-<h1>库存</h1>
+<div class="page-head"><div><div class="eyebrow">Inventory overview</div><h1>库存总览</h1><p>先看每个商品还能接多少，再按批次和货位找实物。</p></div></div>
 <form method="get" class="card grid">
-  <label>货主<br><select name="owner"><option value="">全部</option>{% for o in owners %}<option {% if f.owner == o.code %}selected{% endif %}>{{ o.code }}</option>{% endfor %}</select></label>
-  <label>商品编码<br><input name="product" value="{{ f.product }}"></label>
-  <label>批次（L编号或批号）<br><input name="lot" value="{{ f.lot }}"></label>
-  <label>效期<br><input type="date" name="expiry" value="{{ f.expiry }}"></label>
-  <label>货位<br><select name="location"><option value="">全部</option>{% for l in locations %}<option {% if f.location == l.code %}selected{% endif %}>{{ l.code }}</option>{% endfor %}</select></label>
-  <label>状态<br><select name="condition"><option value="">全部</option>{% for v, t in conditions %}<option value="{{ v }}" {% if f.condition == v %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
-  <label><input type="checkbox" name="show_zero" value="1" {% if show_zero %}checked{% endif %}> 显示数量为 0 的行</label>
-  <div><br><button>查询</button> <a href="{% url 'inventory' %}">清除</a></div>
+  <label>货主<select name="owner"><option value="">全部货主</option>{% for o in owners %}<option {% if f.owner == o.code %}selected{% endif %}>{{ o.code }}</option>{% endfor %}</select></label>
+  <label>商品编码<input name="product" value="{{ f.product }}" placeholder="输入商品编码"></label>
+  <label>批次或批号<input name="lot" value="{{ f.lot }}" placeholder="输入批次"></label>
+  <label>效期<input type="date" name="expiry" value="{{ f.expiry }}"></label>
+  <label>货位<select name="location"><option value="">全部货位</option>{% for l in locations %}<option {% if f.location == l.code %}selected{% endif %}>{{ l.code }}</option>{% endfor %}</select></label>
+  <label>状态<select name="condition"><option value="">全部状态</option>{% for v, t in conditions %}<option value="{{ v }}" {% if f.condition == v %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+  <label class="check"><input type="checkbox" name="show_zero" value="1" {% if show_zero %}checked{% endif %}> 显示零库存</label>
+  <div class="filter-actions"><button>筛选库存</button> <a href="{% url 'inventory' %}">重置</a></div>
 </form>
 
-<h2>按商品：可用数量 <a class="muted" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&amp;{% endif %}expand=1">全部展开</a></h2>
+<div class="section-head"><h2>商品可用量</h2><a class="muted" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&amp;{% endif %}expand=1">展开全部计算明细</a></div>
 <div class="card">
 <table>
   <tr><th>货主</th><th>商品</th><th>名称</th><th class="num">可用</th><th>明细</th></tr>
@@ -37,7 +37,7 @@
 </table>
 </div>
 
-<h2>按批次 / 效期 / 货位 / 状态</h2>
+<h2>批次与货位明细</h2>
 <p class="note">「可分配」= 这一行的实物 − 已分配到这一行的数量。已接单但还没选货位的占用只算在上面的商品汇总里，不摊到单行（待业务确认显示方式，Q03）。</p>
 <div class="card">
 <table>

@@ -6,6 +6,7 @@
 2. Check git status, branch, recent commits, open PRs and the task's authoritative owner/lease. Never overwrite another worker's changes.
 3. Read only the relevant research and acceptance cases. Keep this entry point short; do not load all reference repositories into context.
 4. State a concrete plan for the selected task and run the existing baseline checks.
+5. Review gate (mandatory, local machine): run `.claude/hooks/review-gate.sh`. If it prints ⛔, the independent acceptance reviewer has stopped this branch. Do no new feature work. First add a 「审查叫停回应」 section to docs/HANDOFF.md answering every finding (accept and fix, or dispute with reproducible evidence), fix the accepted ones, then run `scripts/run_acceptance_review.sh`. Only a PASS lifts the stop. Never report work as done while the gate is not PASS.
 
 ## Authority and scope
 
@@ -42,4 +43,5 @@
 - Each implementation PR must include relevant positive, rejection and retry/crash/concurrency checks. Test on the target database; in-memory tests do not prove database locking.
 - Windows delivery requires Windows build/install/upgrade/restart tests. If direct printing enters the agreed release scope, validate it on the real printer before accepting that feature.
 - Update docs/HANDOFF.md with task ID, commit or branch, changes, exact checks/results, unresolved items and one next action. Link detailed evidence instead of copying logs.
+- Before claiming any user-visible change is done, run `scripts/run_acceptance_review.sh` (Codex reviewer, falls back to Claude Code when Codex has no quota). The developer's own tests and screenshots do not replace its verdict.
 - Mark work `review` after evidence exists; only mark `done` after integration and acceptance evidence. Stop after two failed repair attempts on the same issue and hand off the smallest reproducible case.

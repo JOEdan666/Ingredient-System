@@ -7,13 +7,15 @@ import re
 import uuid
 
 import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from pathlib import Path
 
 from inventory import domain
 from inventory.models import Allocation, Order, ReceiptNoticeLine, StockBalance
 from inventory.synthetic import load_synthetic_fixture
 
-BANNER = "模拟持久化（本机 SQLite），不证明并发和锁"
+BANNER = "数据只存在这台电脑"
 ACTOR = "员工甲（合成）"
 
 
@@ -30,11 +32,35 @@ def post(client, name, data, **kwargs):
     return client.post(reverse(name, kwargs=kwargs or None), data, follow=True)
 
 
-@pytest.mark.parametrize("name", ["inventory", "receiving", "outbound", "history"])
+@pytest.mark.parametrize("name", ["inventory", "import_preview", "receiving", "outbound", "history"])
 def test_every_page_shows_simulation_notice(client, loaded, name):
     resp = client.get(reverse(name))
     assert resp.status_code == 200
     assert BANNER in resp.content.decode()
+
+
+def test_real_format_upload_shows_summary_without_writing_inventory(client, loaded):
+    fixture = Path(__file__).resolve().parents[2] / "fixtures" / "synthetic" / "real-format" / "stock_export_synthetic.xlsx"
+    before = StockBalance.objects.count()
+    upload = SimpleUploadedFile("stock.xlsx", fixture.read_bytes(), content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response = client.post(reverse("import_preview"), {"owner_new": "PREVIEW-OWNER", "file": upload}, follow=True)
+    html = response.content.decode()
+    assert response.status_code == 200
+    assert "读出行数" in html and "确认入账" in html
+    assert StockBalance.objects.count() == before
+
+
+def test_import_rejects_unsupported_file_type(client, loaded):
+    upload = SimpleUploadedFile("wrong.csv", b"a,b", content_type="text/csv")
+    response = client.post(reverse("import_preview"), {"owner_new": "PREVIEW-OWNER", "file": upload})
+    assert "只支持 .xlsx 表格和 .pdf 送货单" in response.content.decode()
+
+
+def test_import_reports_broken_pdf_instead_of_returning_500(client, loaded):
+    upload = SimpleUploadedFile("broken.pdf", b"not a pdf", content_type="application/pdf")
+    response = client.post(reverse("import_preview"), {"owner_new": "PREVIEW-OWNER", "file": upload})
+    assert response.status_code == 200
+    assert "文件读不出来" in response.content.decode()
 
 
 def test_inventory_defaults_to_available_with_expandable_detail(client, loaded):

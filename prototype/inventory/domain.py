@@ -541,7 +541,8 @@ def accept_order(*, operation_id, actor, owner_code, number, lines, source_ref="
         created = []
         for i, (product, q, expiry) in enumerate(resolved, start=1):
             ol = OrderLine.objects.create(order=order, line_no=i, product=product, qty_ordered=q,
-                                          requested_expiry=expiry, qty_unallocated=q)
+                                          requested_expiry=expiry, qty_unallocated=q,
+                                          source_line=str(lines[i - 1].get("source_line") or "")[:40])
             ReservationEntry.objects.create(operation=op, order_line=ol, kind=ReservationEntry.Kind.RESERVE,
                                             qty=q, actor=actor)
             created.append(ol)

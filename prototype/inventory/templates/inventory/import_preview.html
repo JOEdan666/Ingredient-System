@@ -1,0 +1,68 @@
+{% extends "inventory/base.html" %}
+{% block title %}文件导入{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">IMPORT</div>
+    <h1>文件导入</h1>
+    <p class="steps"><strong>① 选文件和货主</strong> → ② 核对系统读出来的内容 → ③ 确认入账</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="card upload">
+  {% csrf_token %}
+  <div class="grid">
+    <label>文件
+      <input name="file" type="file" accept=".xlsx,.pdf" required>
+      <span class="hint">库存表 / 验货纸（.xlsx）或 PDF 送货单，系统会自动认出是哪一种</span>
+    </label>
+    <label>货主（这批货属于哪家客户）
+      {% if owners %}
+      <select name="owner" {% if not default_owner %}required{% endif %} oninput="this.form.owner_new.required=false">
+        {% if not default_owner %}<option value="">— 请选择 —</option>{% endif %}
+        {% for o in owners %}<option value="{{ o.code }}" {% if o.code == default_owner %}selected{% endif %}>{{ o.code }}{% if o.name != o.code %}（{{ o.name }}）{% endif %}</option>{% endfor %}
+      </select>
+      <input name="owner_new" placeholder="或输入新货主名称" oninput="if(this.form.owner){this.form.owner.required=!this.value.trim() && !this.form.owner.value}">
+      {% else %}
+      <input name="owner_new" placeholder="输入货主名称，例如客户公司简称" required>
+      <span class="hint">系统里还没有货主；文件里也没写货主，所以需要你填一次，以后可以直接选。</span>
+      {% endif %}
+    </label>
+    <div class="filter-actions"><button type="submit">上传并读取</button></div>
+  </div>
+  <details class="more">
+    <summary>单号（一般不用填）</summary>
+    <label class="muted">单号<input name="external_doc_no" placeholder="不填时：PDF 用单据上的 INV No.，验货纸用文件名里的 SO 号，库存表用文件名"></label>
+  </details>
+</form>
+
+<div class="card howto">
+  <strong>导入后会发生什么</strong>
+  <ul>
+    <li><b>库存表</b> → 作为该货主的<b>期初库存</b>写入（每个货主只能导一次，防止同一批货算两次）。</li>
+    <li><b>验货纸</b> → 生成一张<b>收货预告</b>；货到后在「收货」页点实收，库存才会增加。</li>
+    <li><b>PDF 送货单</b> → 生成一张<b>出库订单</b>，马上占用可用库存；之后在「出库」页选货位、发货。</li>
+  </ul>
+  <p class="muted">每一步都要你在第 ② 步看过、点「确认入账」才会写入；上传的文件本身不保留，只保留读出来的内容（仅在本机）。</p>
+</div>
+
+{% if batches %}
+<div class="section-head"><h2>最近导入</h2></div>
+<div class="card">
+  <table>
+    <thead><tr><th>#</th><th>文件</th><th>类型</th><th>货主</th><th>单号</th><th class="num">行数</th><th>状态</th></tr></thead>
+    <tbody>
+    {% for b, blocked in batches %}
+      <tr><td>{{ b.pk }}</td><td><a href="{% url 'import_detail' b.pk %}">{{ b.file_name }}</a></td><td>{{ b.get_kind_display }}</td><td>{{ b.owner_code }}</td><td>{{ b.external_doc_no }}</td><td class="num">{{ b.recognized }}</td>
+      <td>{% if b.status == 'POSTED' %}<span class="tag AVAILABLE">已入账</span>{% elif blocked %}<span class="tag HOLD">不能入账</span>{% elif b.ready %}<span class="tag PENDING_INSPECTION">待确认</span>{% else %}<span class="tag HOLD">有问题待处理</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<form method="post" action="{% url 'reset_empty' %}" class="danger-zone" onsubmit="return confirm('清空本机原型里的全部数据（包括演示数据和已导入的内容）？此操作不能撤销。');">
+  {% csrf_token %}<button type="submit" class="secondary">清空本机数据，从真实文件重新开始</button>
+  <span class="muted">演示数据和真实数据混在一起会看不清；正式试用真实文件前建议先清空。</span>
+</form>
+{% endblock %}

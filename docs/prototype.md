@@ -56,6 +56,7 @@ uv run pytest                             # 运行测试（42 条）
 | [prototype/inventory/queries.py](../prototype/inventory/queries.py) | 页面用的只读查询（可用、实物、占用的计算口径） |
 | [prototype/inventory/models.py](../prototype/inventory/models.py) | 表结构，对应 domain-model.md 第 1 节；数据库 CHECK 约束 |
 | [prototype/inventory/views.py](../prototype/inventory/views.py) | 页面：只解析表单、调用 domain / queries |
+| [prototype/inventory/import_preview.py](../prototype/inventory/import_preview.py) | 本机真实文件预览桥接：复用 T04b/T04c 解析器，临时文件解析后删除，不写库存 |
 | [prototype/inventory/synthetic.py](../prototype/inventory/synthetic.py) | 通过领域命令载入合成夹具；文件没有 `synthetic: true` 就拒绝 |
 | [prototype/tests/](../prototype/tests/test_domain.py) | `test_domain.py`（29 条）、`test_pages.py`（13 条） |
 
