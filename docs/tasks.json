@@ -495,7 +495,7 @@
     {
       "id": "T06d",
       "title": "PR #19 审查遗留两条：订单完成状态提示、出库分配失败的提示词",
-      "status": "done",
+      "status": "review",
       "owner": "claude-cloud (2026-10-03, user asked to fix outstanding review findings)",
       "depends_on": [
         "T06b"
@@ -510,8 +510,27 @@
       "deliverable": "修 PR #19 两轮审查（@09f589d、@b17ae9e）报告、但未修就合并的 2 条：(1) 订单页顶部提示按实际结果写——全部发出写「已全部发货」，全部取消写「已全部取消，没有发货」，发出加取消写「已处理完：发出 X 件，取消 Y 件」，处理完的订单不再出现「可以发货」；(2) 出库整张分配失败的提示不再沿用收货的「整张单没有入库」，改为「所有行都没有保存」；收货提示不变。不改领域层、不引入新业务规则。",
       "evidence": [
         "2026-10-03: 云端会话先写 5 条测试复现（3 条失败），修后 prototype `uv run --frozen pytest -q` → 121 passed；import-spike 44 passed；未改 application/。本机独立验收闸门（scripts/run_acceptance_review.sh）在云端不可用，未运行。",
-        "2026-10-03: 云端独立审查代理（上下文全新，只读）审 `bef28f7` → PASS：121 passed、3 个变异各被测试抓到、无头 Chromium 实点 5 种订单状态；CI 5 项全绿；按用户 2026-10-03 授权合并（PR #22 → `bee6b71`）。真实文件关不适用（未改导入）。",
-        "2026-10-03: 补审查者「低」级建议：分配被领域层拒绝的回滚路径也断言出库用语（`test_domain_rejection_in_allocation_uses_outbound_wording`）；只改回该行旧说法即失败；prototype 122 passed。"
+        "2026-10-03: 云端独立审查代理（上下文全新，只读）审 `bef28f7` → PASS：121 passed、3 个变异各被测试抓到、无头 Chromium 实点 5 种订单状态；CI 5 项全绿；按用户 2026-10-03 口头授权合并（PR #22 → `bee6b71`，早于 D10 生效）。**不能据此标 done**：这是界面改动，云端用 Playwright 代替了 drive.mjs，按 D10 / acceptance-reviewer.toml 属 COULD_NOT_VERIFY；本机 `scripts/run_acceptance_review.sh` 尚未对 `bee6b71` 运行。真实文件关是否适用（toml 把「inventory, or document UI」也列为触发条件）待本机审查判断。"
+      ]
+    },
+    {
+      "id": "T06e",
+      "title": "T06d 补充：分配被领域层拒绝时的出库用语回归测试",
+      "status": "review",
+      "owner": "claude-cloud (2026-10-03)",
+      "depends_on": [
+        "T06b"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A02"
+      ],
+      "scope": [
+        "prototype/tests/"
+      ],
+      "deliverable": "按 PR #22 审查的低级建议，为 allocation_batch 中领域层拒绝后整单回滚的路径加用语测试；只加测试，不改界面和业务代码。",
+      "evidence": [
+        "2026-10-03: `test_domain_rejection_in_allocation_uses_outbound_wording`；只把该行改回旧说法即失败；prototype 122 passed；CI 5 项全绿。"
       ]
     }
   ]

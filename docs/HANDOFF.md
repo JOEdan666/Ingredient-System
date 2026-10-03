@@ -11,7 +11,10 @@
 - **未运行**：本机独立验收闸门 `scripts/run_acceptance_review.sh` 与 `.claude/hooks/review-gate.sh` 依赖用户本机环境（`~/agent-archive`、Codex），云端跑不了；PASS 前不算完成。
 - 仍待用户决定（T06c 审查留下的小隐患，未改）：整张发货里改了数量后再合上折叠区，红字会被藏住。
 - 结果（同日）：云端独立审查代理审 `bef28f7` → **PASS**（无阻塞问题），CI 全绿，按用户授权已合并（PR #22）。审查者的「低」级建议（另一条回滚路径缺用语测试）已在分支 `agent/claude/T06e-allocation-message-test` 补上，prototype 122 passed。另一条「提示里『没有保存』说了两遍」只是措辞，未改。
-- 下一动作：对 T06e 分支做独立审查，PASS 后合并。
+- **审查叫停回应（云端审查者审 PR #24 `6975a30` → CHANGES_REQUESTED）**：
+  1. 「T06d 标 done 证据不足」——**接受并改**：T06d 是界面改动，云端审查用 Playwright 代替本机 drive.mjs，按 D10 只能算 COULD_NOT_VERIFY。T06d 改回 `review`，证据里写明本机闸门未跑。
+  2. 「分支叫 T06e，任务清单没有 T06e」——**接受并改**：登记 T06e（只加测试）。
+- 下一动作：**用户本机**对 main（含 `bee6b71`）跑 `scripts/run_acceptance_review.sh`，PASS 后 T06d 才能标 done；PR #24（只加测试）云端审查 PASS 后按 D10 合并。
 
 ## 2026-10-01 Claude Code 本机：T06c 整张订单一次发货
 
