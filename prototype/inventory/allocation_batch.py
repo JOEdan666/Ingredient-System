@@ -16,6 +16,9 @@ from .domain import DomainError
 from .models import Order
 from .receiving_batch import LineErrors
 
+# Outbound wording: "入库" is a receiving word (PR #19 review).
+NOT_SAVED = "所有行都没有保存"
+
 MAX_OPERATION_ID = 64  # Operation.operation_id max_length
 
 
@@ -69,7 +72,7 @@ def allocate_order(*, order_id: int, actor: str, operation_id: str, entries: dic
         if parsed:
             plan.append((line, parsed))
     if errors:
-        raise LineErrors(errors)
+        raise LineErrors(errors, NOT_SAVED)
     # Each line gets "<form id>-l<line id>". Never truncate: a cut id could equal another
     # line's id and that line would be treated as a repeat. Too long -> refuse everything.
     if any(len(f"{operation_id}-l{line.pk}") > MAX_OPERATION_ID for line, _ in plan):
@@ -82,5 +85,5 @@ def allocate_order(*, order_id: int, actor: str, operation_id: str, entries: dic
                 domain.allocate_line(operation_id=f"{operation_id}-l{line.pk}", actor=actor,
                                      line_id=line.pk, picks=parsed)
             except DomainError as err:
-                raise LineErrors({line.pk: err.message})  # undoes lines already saved
+                raise LineErrors({line.pk: err.message}, NOT_SAVED)  # undoes lines already saved
     return {"lines": len(plan), "qty": sum(p["qty"] for _, ps in plan for p in ps)}

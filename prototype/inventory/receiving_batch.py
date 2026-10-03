@@ -21,8 +21,8 @@ from .models import Location, ReceiptLine, ReceiptNotice
 class LineErrors(DomainError):
     """Some lines are invalid; `errors` maps line id -> message. Nothing was written."""
 
-    def __init__(self, errors: dict[int, str]):
-        super().__init__("line_errors", f"有 {len(errors)} 行需要改，整张单没有入库。")
+    def __init__(self, errors: dict[int, str], outcome: str = "整张单没有入库"):
+        super().__init__("line_errors", f"有 {len(errors)} 行需要改，{outcome}。")
         self.errors = errors
 
 

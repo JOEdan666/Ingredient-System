@@ -10,7 +10,7 @@
   {% if sheets %}<ul class="sheet-list">{% for s in sheets %}<li><a href="{% url 'pallet_sheet_print' s.pk %}">{{ s.created_at|date:"Y-m-d H:i" }} · {{ s.ship_to }} · 共{{ s.pallet_count }}板 · {{ s.order_numbers }}</a> <span class="muted">{{ s.created_by }}</span></li>{% endfor %}</ul>{% endif %}
 </div>
 
-{% if all_shipped %}<div class="okbar">✅ 已全部发货。</div>
+{% if finished %}<div class="okbar">✅ {% if not cancelled_total %}已全部发货。{% elif not shipped_total %}已全部取消，没有发货。{% else %}已处理完：发出 {{ shipped_total }} 件，取消 {{ cancelled_total }} 件。{% endif %}</div>
 {% elif all_allocated %}<div class="okbar">✅ 全部配好，可以发货（下方「整张发货」）。还有 {{ remaining }} 件未发。</div>
 {% elif short %}<div class="warnbar">还有 {{ short }} 行没配够。可以先保存已经填好的，库存到了再补。还有 {{ remaining }} 件未发。</div>{% endif %}
 

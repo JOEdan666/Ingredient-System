@@ -40,6 +40,22 @@
 - 没有可修的缺陷，所以没有改代码。与 T04f 同一类环境性阻塞（见 T04f 回应），**不再重复复审**，交用户决定是否接受「Windows 部分留在 T07」后合并。
 - 下一动作：推送并开 draft PR（PR 里写明此结论）。推送等用户醒来同意。不要把 T10 的结论说成 A12 整体或 Windows 已通过。
 
+## 2026-10-03 Claude Code 云端：T06d 补修 PR #19 审查遗留的 2 条
+
+- 分支 `agent/claude/T06d-review-followups`（基于 main `0d65c6b`），owner `claude-cloud`。起因：用户要求处理未修完的审查意见。PR #19 两轮审查（`09f589d`、`b17ae9e`）都判 CHANGES_REQUESTED，2 条问题未修就合并，HANDOFF 里也没有回应。
+- 审查叫停回应（逐条）：
+  1. 「订单处理完后仍提示可以发货」——**接受并修**。T06c 已让整单发完时显示「已全部发货」，但整单取消时仍显示「已全部发货」（本次复现）。现在按发出/取消件数分三种写法，处理完的订单不出现「可以发货」。
+  2. 「出库分配失败提示写『整张单没有入库』」——**接受并修**。`LineErrors` 加了结果说法参数，出库分配用「所有行都没有保存」，收货保持原话。
+  3. 流程问题「叫停后未回应就合并」——**接受**，本节即补回应。
+- 检查：先写 `prototype/tests/test_review_followups.py` 5 条，修前 3 条失败；修后 prototype 121 passed、import-spike 44 passed、`check_project.py` PASS、`git diff --check` 无输出。
+- **未运行**：本机独立验收闸门 `scripts/run_acceptance_review.sh` 与 `.claude/hooks/review-gate.sh` 依赖用户本机环境（`~/agent-archive`、Codex），云端跑不了；PASS 前不算完成。
+- 仍待用户决定（T06c 审查留下的小隐患，未改）：整张发货里改了数量后再合上折叠区，红字会被藏住。
+- 结果（同日）：云端独立审查代理审 `bef28f7` → **PASS**（无阻塞问题），CI 全绿，按用户授权已合并（PR #22）。审查者的「低」级建议（另一条回滚路径缺用语测试）已在分支 `agent/claude/T06e-allocation-message-test` 补上，prototype 122 passed。另一条「提示里『没有保存』说了两遍」只是措辞，未改。
+- **审查叫停回应（云端审查者审 PR #24 `6975a30` → CHANGES_REQUESTED）**：
+  1. 「T06d 标 done 证据不足」——**接受并改**：T06d 是界面改动，云端审查用 Playwright 代替本机 drive.mjs，按 D10 只能算 COULD_NOT_VERIFY。T06d 改回 `review`，证据里写明本机闸门未跑。
+  2. 「分支叫 T06e，任务清单没有 T06e」——**接受并改**：登记 T06e（只加测试）。
+- 下一动作：**用户本机**对 main（含 `bee6b71`）跑 `scripts/run_acceptance_review.sh`，PASS 后 T06d 才能标 done；PR #24（只加测试）云端审查 PASS 后按 D10 合并。
+
 ## 2026-10-01 Claude Code 本机：T06c 整张订单一次发货
 
 - 分支 `agent/claude/T06c-ship-whole-order`（基于 main `46186e4`，#19 合并后才开，避免冲突）。
