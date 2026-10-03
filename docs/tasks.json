@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-09-28",
+  "updated": "2026-10-03",
   "tasks": [
     {
       "id": "T01",
@@ -490,6 +490,26 @@
       "evidence": [
         "2026-10-01: prototype pytest → 116 passed（新增 tests/test_ship_order.py 6 条）。反例检查发现 2 条测试原本抓不住问题（页面提示文字与折叠文案让它们照样通过），已改为断言该行的错误原因和「折叠外没有行」；再次反例：去掉过发检查或折叠判断，2 条失败。",
         "2026-10-01: 本机真实数据：真实 PDF 订单 9 行整张分配 31 件 → 整张发货其中 1 项少发 2 → 发出 29 件，库存 79161→79132，已分配剩 2，流水 +9；页面提示还有 2 件未发、可继续发。截图已看。"
+      ]
+    },
+    {
+      "id": "T06d",
+      "title": "PR #19 审查遗留两条：订单完成状态提示、出库分配失败的提示词",
+      "status": "review",
+      "owner": "claude-cloud (2026-10-03, user asked to fix outstanding review findings)",
+      "depends_on": [
+        "T06b"
+      ],
+      "blocked_by": [],
+      "acceptance": [
+        "A02"
+      ],
+      "scope": [
+        "prototype/"
+      ],
+      "deliverable": "修 PR #19 两轮审查（@09f589d、@b17ae9e）报告、但未修就合并的 2 条：(1) 订单页顶部提示按实际结果写——全部发出写「已全部发货」，全部取消写「已全部取消，没有发货」，发出加取消写「已处理完：发出 X 件，取消 Y 件」，处理完的订单不再出现「可以发货」；(2) 出库整张分配失败的提示不再沿用收货的「整张单没有入库」，改为「所有行都没有保存」；收货提示不变。不改领域层、不引入新业务规则。",
+      "evidence": [
+        "2026-10-03: 云端会话先写 5 条测试复现（3 条失败），修后 prototype `uv run --frozen pytest -q` → 121 passed；import-spike 44 passed；未改 application/。本机独立验收闸门（scripts/run_acceptance_review.sh）在云端不可用，未运行。"
       ]
     }
   ]

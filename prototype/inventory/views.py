@@ -392,13 +392,16 @@ def order_page(request, order_id, *, posted=None, errors=None, status=200, ship_
     ship_rows, ship_attention, ship_ready = _ship_rows(detail, posted if ship_posted else None, ship_errors or {})
     remaining = sum(max(0, l["numbers"]["ordered"] - l["numbers"]["cancelled"] - l["numbers"]["shipped"])
                     for l in detail["lines"])
+    shipped_total = sum(l["numbers"]["shipped"] for l in detail["lines"])
+    cancelled_total = sum(l["numbers"]["cancelled"] for l in detail["lines"])
     return render(request, "inventory/order.html", _ctx(
         request, order=detail, reasons=LineCancellation.Reason.choices,
         sheets=PalletSheet.objects.filter(orders__pk=order_id).order_by("-pk"),
         attention=attention, ready=ready, short=short,
         all_allocated=not attention and not ready,
         ship_attention=ship_attention, ship_ready=ship_ready, ship_open=bool(ship_rows),
-        remaining=remaining, all_shipped=remaining == 0,
+        remaining=remaining, finished=remaining == 0,
+        shipped_total=shipped_total, cancelled_total=cancelled_total,
     ), status=status)
 
 
