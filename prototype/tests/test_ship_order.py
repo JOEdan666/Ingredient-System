@@ -32,7 +32,7 @@ def allocs(order):
 def test_default_ships_everything_in_one_click_and_rows_are_folded(client, world):
     order, a = allocated_order(world)
     html = client.get(reverse("order_detail", args=[order.pk])).content.decode()
-    assert "整张发货" in html and "2 项按分配数量发货" in html  # nothing changed -> all folded
+    assert "整张发货" in html and 'id="ship-ready-count">2</span> 项按分配数量发货' in html
     visible, folded = html.split("按分配数量发货（已折叠", 1)
     ship_part = visible[visible.index("整张发货"):]
     assert 'class="srow' not in ship_part and folded.count('class="srow') == 2  # rows only inside the fold
@@ -48,6 +48,15 @@ def test_partial_row_is_shown_and_rest_stays_for_next_time(client, world):
     html = post(client, order, {x.pk: 3, y.pk: 1}).content.decode()
     assert "发货完成：2 项，共 4 件" in html and "还有 3 件未发" in html
     assert "整张发货" in html  # the remaining 3 can be shipped later
+
+
+def test_changed_row_moves_out_of_fold_and_can_move_back(client, world):
+    order, _ = allocated_order(world)
+    html = client.get(reverse("order_detail", args=[order.pk])).content.decode()
+    assert 'id="ship-attention-rows"' in html
+    assert 'id="ship-ready-rows"' in html
+    assert '(left === 0 ? ready : attention).appendChild(tr)' in html
+    assert 'fold.hidden = ready.children.length === 0' in html
 
 
 def test_bad_row_ships_nothing_keeps_values_and_names_the_row(client, world):

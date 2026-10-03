@@ -8,6 +8,9 @@
 
 ### 审查叫停回应（Codex gpt-5.6-luna 审 `395430e` → CHANGES_REQUESTED，唯一 1 条中）
 
+- 2026-10-03 重新核对后，撤回下面的旧异议并**接受修复**：任务写明「未修改项折叠」，因此修改过的行应立即离开折叠区，让员工在提交前持续看见红色「这次少发 N，留下次」。现在数量一变化，行会自动移到上方并标红；改回默认数量时会重新收进折叠区，折叠数量也同步更新。新增页面结构/脚本回归测试；修复后须重跑界面截图和独立验收，PASS 前不算解除叫停。
+- 修复后自检：T06c 定向 `7 passed`，prototype 全量 `117 passed`，import-spike `44 passed`，`scripts/check_project.py` PASS，`git diff --check` 无输出。无头 Chrome 真正展开折叠项并把 3 改成 1 后，页面状态为 `attention=1 / folded=0 / red=true`，截图中该行在折叠区外显示红字「这次少发 2，留下次」；改动前后截图分别为 `/private/tmp/ingredient-t06c-before.png`、`/private/tmp/ingredient-t06c-after.png`。服务已停止。下一动作：提交当前修复并运行 `scripts/run_acceptance_review.sh`；只有新鲜 PASS 才解除叫停。
+
 - 「改过的行没有移到折叠区外」——**有异议，附证据**。审查者截图 04 里折叠区始终关着，说明它是用脚本直接改了折叠区内的隐藏输入框；真人要改数量必须先点开折叠区，点开后该行当场标红（我方截图 `ship-3-partial-edit.png`）。任务书写的是「改过的项标出『这次少发 N，留下次』」，没有写「移出折叠区」。提交后若有一项不对，服务端会把该行放到折叠区外并写明原因（`test_bad_row_...` 覆盖）。
 - 但留一个小隐患交用户决定：改完数量后再把折叠区合上，红字会被藏起来，提交时只有底部一个按钮。可选做法是改数量后自动把摘要改成「N 项已改数量」并标红。**本轮不改代码**（没有新业务规则，改了要重新过闸门）。
 - 其余审查结果：4 个自动检查全过（pytest 116 / import-spike 44 / 项目检查 / diff --check），words-versus-behavior 表 6/7 通过，库存发货前后对得上。完整报告 `/private/tmp/ingredient-acceptance-report-20261001-002514-40201.txt`。

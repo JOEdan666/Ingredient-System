@@ -34,11 +34,11 @@
   <p class="muted">默认按已分配的数量全部发出；这次只发一部分的，改数量就行，剩下的留到下次。</p>
   <table class="rtable"><colgroup><col style="width:8%"><col style="width:11%"><col style="width:10%"><col style="width:11%"><col style="width:7%"><col style="width:8%"><col style="width:11%"><col style="width:16%"><col style="width:18%"></colgroup>
     <thead><tr><th>行</th><th>商品</th><th>货位</th><th>效期</th><th>批次</th><th class="num">已分配未发</th><th>本次发货</th><th></th><th></th></tr></thead>
-    <tbody>{% for r in ship_attention %}{% include "inventory/_ship_row.html" %}{% endfor %}</tbody>
+    <tbody id="ship-attention-rows">{% for r in ship_attention %}{% include "inventory/_ship_row.html" %}{% endfor %}</tbody>
   </table>
   {% if ship_ready %}
-  <details class="fold"><summary>{{ ship_ready|length }} 项按分配数量发货（已折叠，点开可查看或修改）</summary>
-    <table class="rtable"><colgroup><col style="width:8%"><col style="width:11%"><col style="width:10%"><col style="width:11%"><col style="width:7%"><col style="width:8%"><col style="width:11%"><col style="width:16%"><col style="width:18%"></colgroup><tbody>{% for r in ship_ready %}{% include "inventory/_ship_row.html" %}{% endfor %}</tbody></table>
+  <details class="fold" id="ship-ready-fold"><summary><span id="ship-ready-count">{{ ship_ready|length }}</span> 项按分配数量发货（已折叠，点开可查看或修改）</summary>
+    <table class="rtable"><colgroup><col style="width:8%"><col style="width:11%"><col style="width:10%"><col style="width:11%"><col style="width:7%"><col style="width:8%"><col style="width:11%"><col style="width:16%"><col style="width:18%"></colgroup><tbody id="ship-ready-rows">{% for r in ship_ready %}{% include "inventory/_ship_row.html" %}{% endfor %}</tbody></table>
   </details>
   {% endif %}
   <div class="filter-actions">{% include "inventory/_op.html" %}<button type="submit">确认发货（整张订单）</button></div>
@@ -77,6 +77,13 @@ function shipLeft(input) {
   const left = /^\d+$/.test(v) ? open - +v : null;
   cell.textContent = left === null ? "数量看不懂" : left > 0 ? "这次少发 " + left + "，留下次" : left < 0 ? "多发了 " + (-left) : "";
   tr.classList.toggle("diff", left !== 0);
+  const attention = document.getElementById("ship-attention-rows");
+  const ready = document.getElementById("ship-ready-rows");
+  const fold = document.getElementById("ship-ready-fold");
+  if (!attention || !ready || !fold) return;
+  (left === 0 ? ready : attention).appendChild(tr);
+  document.getElementById("ship-ready-count").textContent = ready.children.length;
+  fold.hidden = ready.children.length === 0;
 }
 function allocSum(input) {
   const box = input.closest(".aline"), need = +box.dataset.need;
