@@ -12,6 +12,11 @@
 
 ### 审查叫停回应（Codex gpt-5.6-luna 审 `7a49fb2` → COULD_NOT_VERIFY，无代码/界面缺陷）
 
+- **2026-10-03 定时开发者复核 `805f989` 的新闸门：**
+  - 「T10 Windows 中文文件名/Excel 打开效果仍未验证」：**接受“A12 整体仍未验收”，但对“因此 T10/T11 当前范围不能 PASS”有异议。可复现证据：`docs/tasks.json` T10 交付物明写 Windows 文件名/打开效果属 T07，T11 明写不涉及 Windows；T07 又明写受 Q01 阻塞。`docs/acceptance.json` 中 A12 仍是 `not_run`，没有删除、放宽或伪造 Windows 证据。同一范围分层已在 T04f `c1c4c64` 的独立验收中得到 PASS，同时报告仍明确保留 Windows 未验证。所以本分支只应判断 T10 的本机可验范围与 T11，不应把尚未开工的 T07 目标环境验收前置给它们。
+  - 「T11 无未处理代码缺陷」：**接受，无需改代码。**该轮审查已实跑 132 条 prototype 测试、44 条 import-spike 测试、项目检查、首次用户 UI、真实文件只读汇总与库存非变更检查，未报出可复现缺陷。
+  - 本次只补审查叫停回应，不改功能。下一动作：对新的已提交 HEAD 重跑 `scripts/run_acceptance_review.sh`；只有当前范围得到 PASS 才解除叫停，Windows/A12 仍留给 T07。
+
 - 审查者实跑：prototype 131 passed、import-spike 44 passed、项目检查 PASS、`git diff --check` 通过；注入真实 500 看到中文提示与编号、`/errors/` 可按编号片段查找、404/库存不足/数量错误不入记录、日志写入失败仍显示友好页、插入 1001 条后保留 1000；库存指纹前后一致；另按「首次使用」走了文件导入与已批准真实文件（只看汇总）。完整报告 `/private/tmp/ingredient-acceptance-report-20261001-020758-51056.txt`。
 - 唯一理由：Windows 中文文件名/Excel 打开效果（T10 遗留，本机无法产出）。T11 本身不涉及 Windows。**同 T10 回应：接受为未验证，不伪造证据，归 T07；不再重复复审。** 没有可修缺陷，未改代码。
 - 下一动作：推送并开 draft PR（PR 里写明此结论）。推送等用户醒来同意。合并顺序：T06c 标 done → T10 → T11。
