@@ -58,3 +58,17 @@ def test_allocation_failure_message_does_not_talk_about_receiving(client, world)
 
 def test_receiving_failure_message_unchanged():
     assert LineErrors({1: "x"}).message == "有 1 行需要改，整张单没有入库。"
+
+
+def test_domain_rejection_in_allocation_uses_outbound_wording(client, world):
+    """Reviewer finding on PR #22 (low): the rollback path at allocation_batch.py
+    (domain refuses a later line) had no wording test of its own."""
+    from .conftest import EXP_2
+    a = world.opening(10, location="A-01", expiry=EXP_1)
+    b = world.opening(2, location="B-01", expiry=EXP_2)
+    order = accept([(3, None), (4, EXP_1)], number="SYN-RF-DOMAIN")
+    l1, l2 = order.lines.order_by("line_no")
+    html = post(client, order, {(l1.pk, a.pk): 3, (l2.pk, b.pk): 2}).content.decode()
+    msg = html.split("整张订单没有保存", 1)[1].split("</li>", 1)[0]
+    assert "所有行都没有保存" in msg and "入库" not in msg
+    assert Allocation.objects.count() == 0
