@@ -1,5 +1,17 @@
 # 当前交接
 
+## 2026-10-03 Claude Code 云端：T06d 补修 PR #19 审查遗留的 2 条
+
+- 分支 `agent/claude/T06d-review-followups`（基于 main `0d65c6b`），owner `claude-cloud`。起因：用户要求处理未修完的审查意见。PR #19 两轮审查（`09f589d`、`b17ae9e`）都判 CHANGES_REQUESTED，2 条问题未修就合并，HANDOFF 里也没有回应。
+- 审查叫停回应（逐条）：
+  1. 「订单处理完后仍提示可以发货」——**接受并修**。T06c 已让整单发完时显示「已全部发货」，但整单取消时仍显示「已全部发货」（本次复现）。现在按发出/取消件数分三种写法，处理完的订单不出现「可以发货」。
+  2. 「出库分配失败提示写『整张单没有入库』」——**接受并修**。`LineErrors` 加了结果说法参数，出库分配用「所有行都没有保存」，收货保持原话。
+  3. 流程问题「叫停后未回应就合并」——**接受**，本节即补回应。
+- 检查：先写 `prototype/tests/test_review_followups.py` 5 条，修前 3 条失败；修后 prototype 121 passed、import-spike 44 passed、`check_project.py` PASS、`git diff --check` 无输出。
+- **未运行**：本机独立验收闸门 `scripts/run_acceptance_review.sh` 与 `.claude/hooks/review-gate.sh` 依赖用户本机环境（`~/agent-archive`、Codex），云端跑不了；PASS 前不算完成。
+- 仍待用户决定（T06c 审查留下的小隐患，未改）：整张发货里改了数量后再合上折叠区，红字会被藏住。
+- 下一动作：在本机对本分支跑 `scripts/run_acceptance_review.sh`。
+
 ## 2026-10-01 Claude Code 本机：T06c 整张订单一次发货
 
 - 分支 `agent/claude/T06c-ship-whole-order`（基于 main `46186e4`，#19 合并后才开，避免冲突）。
