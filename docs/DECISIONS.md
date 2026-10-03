@@ -130,9 +130,11 @@ ID / 日期 / 状态 / 触发问题 / 选项与代价 / 选择与证据 / 影响
 日期：2026-10-03 · 状态：**用户（仓库所有者）明确授权**。来源：用户在云端会话中说「让审查者审核……能通过就直接通过就行了，不用问我」。
 
 - **可以直接合并的条件（全部满足）**：
-  1. 独立审查者对 PR 的**最终 SHA**给出 PASS。审查者可以是本机的 `scripts/run_acceptance_review.sh`（Codex，额度不够时换 Claude），也可以是云端会话另起的独立审查代理：上下文全新、不改代码，审查标准用 `.codex/agents/acceptance-reviewer.toml`，云端做不到的项目要如实写明。
-  2. 该 SHA 上 GitHub Actions 全部通过。
-  3. 合并之后没有新提交；合并后的提交仍要重新审查。
+  1. 独立审查者对 PR 的**最终 SHA**给出 PASS，并且这个 PASS 按 `.codex/agents/acceptance-reviewer.toml` 的判定规则得出：这次改动要求的检查项只要有一项没跑成（真实文件关、Windows、打印等），结论就是 COULD_NOT_VERIFY，不能合并。缺少的证据不能当成通过。
+  2. 审查者可以是本机的 `scripts/run_acceptance_review.sh`（Codex，额度不够时换 Claude），也可以是云端会话另起的独立审查代理（上下文全新，只读不改）。云端代理只适用于它能跑完全部必查项目的改动。凡是触及导入、解析、上传、预览，或其他需要用户本机真实文件关的改动，必须用本机脚本审查。
+  3. 该 SHA 上 GitHub Actions 全部通过。
+  4. 从审查 PASS 到合并之间没有新提交。PASS 之后只要有新提交，就要重新审查。
+  5. 满足以上条件后，由开发代理把 PR 从草稿改为可合并，然后合并。
 - **仍要先问用户**：业务规则和 Q01–Q06 这类待业务答复的问题、真实客户数据、生产迁移、付费服务、对外发布、给客户发消息。这些不因本条而放开（AGENTS.md「Authority and scope」「Data and repository operations」）。
 - 审查判 CHANGES_REQUESTED 或 COULD_NOT_VERIFY 时不合并。按 AGENTS.md 先逐条回应、修正、再审；同一问题两次修不好就停下，交给用户。
 - 用户可以随时撤销本授权。
