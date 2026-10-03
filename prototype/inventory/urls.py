@@ -27,7 +27,4 @@ urlpatterns = [
     path("history/", views.history_page, name="history"),
     path("staff/", views.staff_page, name="staff"),
     path("errors/", views.errors_page, name="errors"),
-    path("export/inventory/", views.export_inventory, name="export_inventory"),
-    path("export/movements/", views.export_movements, name="export_movements"),
-    path("export/orders/", views.export_orders, name="export_orders"),
 ]

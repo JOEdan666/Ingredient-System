@@ -6,16 +6,14 @@ from datetime import datetime
 
 from django.contrib import messages
 from django.core.management import call_command
-from django.http import Http404, HttpResponse
-from django.utils import timezone
-from django.utils.http import content_disposition_header
+from django.http import Http404
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_POST
 
 from . import domain, queries
 from .domain import DomainError
 from .receiving_batch import LineErrors
-from . import allocation_batch, exports, folders, import_posting, pallet_sheets, receiving_batch, staff
+from . import allocation_batch, folders, import_posting, pallet_sheets, receiving_batch, staff
 from .import_preview import PreviewError, parse_upload, problem_summary, recheck
 from .models import Allocation, Condition, ImportBatch, LineCancellation, ErrorLog, Location, Order, OrderLine, Owner, PalletSheet, Staff
 from .synthetic import load_synthetic_fixture
@@ -524,33 +522,6 @@ def staff_page(request):
             messages.error(request, f"没有改成：{getattr(err, 'message', err)}")
         return redirect("staff")
     return render(request, "inventory/staff.html", _ctx(request, people=Staff.objects.order_by("-active", "name")))
-
-
-# 导出 Excel ---------------------------------------------------------------
-
-def _xlsx(request, name, content):
-    """Read-only download; GET only, so a link or a reload can never change stock."""
-    response = HttpResponse(content, content_type=exports.XLSX_TYPE)
-    response["Content-Disposition"] = content_disposition_header(True, f"{name}_{timezone.localtime():%Y%m%d-%H%M}.xlsx")
-    return response
-
-
-@require_GET
-def export_inventory(request):
-    f = {k: request.GET.get(k, "").strip() for k in ("owner", "product", "lot", "expiry", "location", "condition")}
-    return _xlsx(request, "库存", exports.inventory_workbook(show_zero=request.GET.get("show_zero") == "1", **f))
-
-
-@require_GET
-def export_movements(request):
-    return _xlsx(request, "库存流水", exports.movements_workbook())
-
-
-@require_GET
-def export_orders(request):
-    return _xlsx(request, "订单", exports.orders_workbook())
-
-
 # 错误记录 -----------------------------------------------------------------
 
 def errors_page(request):

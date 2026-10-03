@@ -1,7 +1,7 @@
 {% extends "inventory/base.html" %}
 {% block title %}库存{% endblock %}
 {% block content %}
-<div class="page-head"><div><div class="eyebrow">Inventory overview</div><h1>库存总览</h1><p>先看每个商品还能接多少，再按批次和货位找实物。</p></div><a class="dl" href="{% url 'export_inventory' %}?owner={{ f.owner|urlencode }}&product={{ f.product|urlencode }}&lot={{ f.lot|urlencode }}&expiry={{ f.expiry|urlencode }}&location={{ f.location|urlencode }}&condition={{ f.condition|urlencode }}{% if show_zero %}&show_zero=1{% endif %}" title="按下面已筛选的条件导出（没筛选就是全部），只读，不改库存">导出 Excel</a></div>
+<div class="page-head"><div><div class="eyebrow">Inventory overview</div><h1>库存总览</h1><p>先看每个商品还能接多少，再按批次和货位找实物。</p></div></div>
 <form method="get" class="card grid">
   <label>货主<select name="owner"><option value="">全部货主</option>{% for o in owners %}<option {% if f.owner == o.code %}selected{% endif %}>{{ o.code }}</option>{% endfor %}</select></label>
   <label>商品编码<input name="product" value="{{ f.product }}" placeholder="输入商品编码"></label>
