@@ -94,6 +94,7 @@ def balance_rows(*, owner="", product="", lot="", expiry="", location="", condit
             "owner": b.owner.code,
             "product": b.product.code,
             "name": b.product.name_zh,
+            "unit": b.product.base_unit,
             "lot": f"L{b.lot_id}",
             "external_lot": b.lot.external_lot or "未知",
             "lot_source": f"{b.lot.get_source_type_display()} {b.lot.source_ref}",

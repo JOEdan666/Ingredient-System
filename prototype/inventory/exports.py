@@ -5,6 +5,7 @@ formula, and file-imported names can start with anything; control characters ope
 """
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import date, datetime
 from io import BytesIO
 
@@ -70,6 +71,42 @@ def _stamp() -> str:
     return timezone.localtime().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _filtered_product_summaries(balances, *, owner, product, lot, expiry, location, condition):
+    """Summarize exactly the stock rows selected by the export filters.
+
+    Product-level, not-yet-allocated reservations have no lot/location/condition, so they are included only
+    when the filters still describe whole products. Narrow stock-row filters report allocated quantities from
+    those rows instead of silently mixing in unrelated locations or lots.
+    """
+    keys = {(b["owner"], b["product"]) for b in balances}
+    narrow = any((lot, expiry, location, condition))
+    if not narrow:
+        return [s for s in queries.product_summaries(owner=owner, product=product)
+                if (s["owner"], s["product"]) in keys]
+
+    grouped = defaultdict(lambda: {"on_hand": 0, "sellable": 0, "reserved": 0})
+    labels = {}
+    for b in balances:
+        key = (b["owner"], b["product"])
+        labels[key] = (b["name"], b["unit"])
+        grouped[key]["on_hand"] += b["on_hand"]
+        grouped[key]["reserved"] += b["allocated"]
+        if b["sellable"]:
+            grouped[key]["sellable"] += b["on_hand"]
+
+    result = []
+    for owner_code, product_code in sorted(grouped):
+        totals = grouped[(owner_code, product_code)]
+        name, unit = labels[(owner_code, product_code)]
+        result.append({
+            "owner": owner_code, "product": product_code, "name": name, "unit": unit,
+            "on_hand": totals["on_hand"], "sellable": totals["sellable"],
+            "not_sellable": totals["on_hand"] - totals["sellable"],
+            "reserved": totals["reserved"], "available": totals["sellable"] - totals["reserved"],
+        })
+    return result
+
+
 def inventory_workbook(*, owner="", product="", lot="", expiry="", location="", condition="", show_zero=False) -> bytes:
     filters = dict(owner=owner, product=product, lot=lot, expiry=expiry, location=location, condition=condition)
     wb = Workbook()
@@ -79,7 +116,9 @@ def inventory_workbook(*, owner="", product="", lot="", expiry="", location="", 
            ([b["owner"], b["product"], b["name"], b["lot"], b["external_lot"], b["expiry"] or "未知", b["location"],
              b["condition_label"], b["on_hand"], b["allocated"], b["free"], b["lot_source"]] for b in balances),
            first=True)
-    summaries = queries.product_summaries(owner=owner, product=product)
+    summaries = _filtered_product_summaries(
+        balances, owner=owner, product=product, lot=lot, expiry=expiry, location=location, condition=condition,
+    )
     _sheet(wb, "商品汇总", ["货主", "商品编码", "商品名", "单位", "实物数", "可售", "不可售", "占用", "可用（可售−占用）"],
            ([s["owner"], s["product"], s["name"], s["unit"], s["on_hand"], s["sellable"], s["not_sellable"],
              s["reserved"], s["available"]] for s in summaries))
@@ -87,6 +126,7 @@ def inventory_workbook(*, owner="", product="", lot="", expiry="", location="", 
     _notes(wb, "说明", [
         f"导出时间：{_stamp()}（香港时间）。这是导出那一刻的快照，之后库存还会变。",
         f"筛选条件：{'、'.join(f'{k}={v}' for k, v in shown.items()) or '无'}；{'包含' if show_zero else '不含'}实物数为 0 的行。",
+        "商品汇总只合计筛选后的明细；按货位、批次、效期或状态筛选时，占用只含这些明细中已分配未发的数量。",
         "实物数 = 仓库里实际有的；已分配未发 = 已选好货位、还没发出的；可自由分配 = 实物数 − 已分配（只对「可用」状态计）。",
         "可用（可售−占用）是 D07 的候选口径，客户尚未确认（Q03），对账时请以客户认可的口径为准。",
         "本文件只读导出，不改变任何库存数字。",
