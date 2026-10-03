@@ -7,7 +7,8 @@
 - 「Windows/Excel 目标环境仍未验证」：**接受 A12 仍未验收，但定位到任务与验收映射错误并修复。**T11 是错误记录，实际对应 A14 的「错误日志不输出客户原单和敏感字段」；原任务却把 A12 当占位编号，导致审查被迫验收本任务不包含的 Windows 导出。现将 T11 改挂 A14，不更改 A12 内容或状态。
 - 「当前分支还包含 T10 Excel 导出」：**接受并修。**原分支为了少冲突堆叠在 T10 上，结果把 T10 未完成的 Windows 验收带进 T11。现已同步 `origin/main`，并把 T10 的代码、测试和任务记录从本分支最终差异中撤出；T10 原提交仍在其历史/分支上，没有删除 A12 或伪造 Windows 证据。
 - 「T11 代码在本机可验证范围内无缺陷」：**接受。**保留错误编号、隐私最小化、404/业务拒绝不记录、最多 1000 条及记录失败仍显示友好页的现有实现和测试。
-- 修复后动作：先跑 T11 定向测试、prototype 全量、import-spike、项目检查和 diff 检查；提交当前 HEAD 后再跑 `scripts/run_acceptance_review.sh`。只有新报告明确 PASS 才解除叫停。
+- 修复后自检：`test_error_log.py` 7 passed；prototype 全量 129 passed；import-spike 44 passed；`scripts/check_project.py` PASS（22 tasks / 14 acceptance definitions）；`git diff --check origin/main...HEAD` 无输出。application、Windows、安装与打印未运行，本次最终差异也未修改这些范围。
+- 下一动作：提交当前 HEAD 后跑 `scripts/run_acceptance_review.sh`。只有新报告明确 PASS 才解除叫停。
 
 ## 2026-10-01 Claude Code 本机：T11 错误记录
 
