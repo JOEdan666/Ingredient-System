@@ -10,7 +10,8 @@
 - 检查：先写 `prototype/tests/test_review_followups.py` 5 条，修前 3 条失败；修后 prototype 121 passed、import-spike 44 passed、`check_project.py` PASS、`git diff --check` 无输出。
 - **未运行**：本机独立验收闸门 `scripts/run_acceptance_review.sh` 与 `.claude/hooks/review-gate.sh` 依赖用户本机环境（`~/agent-archive`、Codex），云端跑不了；PASS 前不算完成。
 - 仍待用户决定（T06c 审查留下的小隐患，未改）：整张发货里改了数量后再合上折叠区，红字会被藏住。
-- 下一动作：在本机对本分支跑 `scripts/run_acceptance_review.sh`。
+- 结果（同日）：云端独立审查代理审 `bef28f7` → **PASS**（无阻塞问题），CI 全绿，按用户授权已合并（PR #22）。审查者的「低」级建议（另一条回滚路径缺用语测试）已在分支 `agent/claude/T06e-allocation-message-test` 补上，prototype 122 passed。另一条「提示里『没有保存』说了两遍」只是措辞，未改。
+- 下一动作：对 T06e 分支做独立审查，PASS 后合并。
 
 ## 2026-10-01 Claude Code 本机：T06c 整张订单一次发货
 
