@@ -10,6 +10,9 @@
 
 ### 审查叫停回应（Codex gpt-5.6-luna 审 `49f6f99` → COULD_NOT_VERIFY，无代码/界面缺陷）
 
+- **2026-10-03 新复审 finding（`99ddf39` → CHANGES_REQUESTED）接受并修**：「按货位筛选时明细已筛选，但商品汇总仍是全量」。这会让员工把别的货位数量误算进当前导出。现在商品汇总只合计筛选后的明细；货位/批次/效期/状态筛选下，占用只计算这些明细里已经分配未发的数量，因为未选货位的商品级占用无法归到某个货位。补 B-01 只剩 1 个货主、C-01 明细与汇总都为空的回归测试，并在工作簿说明页写明口径。修后须重跑 Excel 内容核对与独立验收，PASS 前不解除叫停。
+- 修复后自检：T10 定向 `9 passed`，prototype 全量 `125 passed`，import-spike `44 passed`，`scripts/check_project.py` PASS，`git diff --check` 无输出。定向测试实际打开导出的 `.xlsx`，确认 B-01 的明细与汇总都只有货主 B（实物/可售/占用/可用 = 5/5/0/5），C-01 两张表都只有表头、没有数据行。下一动作：提交并重跑 `scripts/run_acceptance_review.sh`。
+
 - 审查者实跑：prototype 124 passed、import-spike 44 passed、项目检查 PASS、`git diff --check` 通过；用 drive.mjs 真点了三页导出按钮，三个下载均 200 且带中文文件名；库存指纹前后一致（`balances=4 on_hand=37 allocated=0 movements=4 orders=0 notices=0 hash=df76440d0909d046`）。完整报告 `/private/tmp/ingredient-acceptance-report-20261001-010305-46754.txt`。
 - 唯一理由：Windows 上的中文文件名/Excel 打开效果、真实客户数据导出、大数据量耗时没有证据。**接受为「未验证」，不伪造证据**：Windows 归 T07（被 Q01 阻塞），这台 Mac 无法产出；T10 任务书已写明只覆盖 A12 中「重复导出不影响库存」和 Excel 内容中文正常。真实客户数据：本轮只导出合成库，导出表里没有也不会提交真实数据。
 - 没有可修的缺陷，所以没有改代码。与 T04f 同一类环境性阻塞（见 T04f 回应），**不再重复复审**，交用户决定是否接受「Windows 部分留在 T07」后合并。

@@ -56,6 +56,21 @@ def test_inventory_export_follows_the_filters_and_zero_rows(client, world):
     assert rows == []  # an empty result still gives a valid file with headers
 
 
+def test_inventory_export_summary_follows_location_filter(client, world):
+    world.opening(10, location="A-01")
+    world.opening(5, location="B-01", owner="SYN-OWNER-B")
+    wb = book(client.get(reverse("export_inventory"), {"location": "B-01"}))
+    _, detail = table(wb["批次货位明细"])
+    head, summary = table(wb["商品汇总"])
+    assert len(detail) == len(summary) == 1
+    row = dict(zip(head, summary[0]))
+    assert (row["货主"], row["实物数"], row["可售"], row["占用"], row["可用（可售−占用）"]) == (
+        "SYN-OWNER-B", 5, 5, 0, 5,
+    )
+    wb = book(client.get(reverse("export_inventory"), {"location": "C-01"}))
+    assert table(wb["批次货位明细"])[1] == table(wb["商品汇总"])[1] == []
+
+
 def test_export_is_read_only_and_get_only(client, world):
     a = world.opening(10)
     res = world.accept("SYN-EXP-2", 2)
